@@ -1,0 +1,62 @@
+
+import os
+import platform
+
+if platform.system() == "Darwin":
+	my_ld_flags = ['']
+	my_cxx_flags = ['-std=c++14']
+	my_cflags = ['-O3', '-ffast-math']
+	my_link_flags = ['-L'+os.getenv('DAOROOT')+'/lib/']
+else:
+	my_ld_flags = ['-lrt']
+	my_cxx_flags = ['']
+	my_cflags = ['-Ofast']
+	my_link_flags = ['-L'+os.getenv('DAOROOT')+'/lib/','-L'+os.getenv('DAOROOT')+'/lib64/']
+
+libdirs = [
+    bld.path.get_bld().parent.find_node('src').abspath(),
+    bld.path.get_bld().parent.find_node('external').abspath(),
+]
+
+rpath_flags = [f'-Wl,-rpath,{d}' for d in libdirs]
+
+hrtc = bld.program(
+	source = 'hrtc.c',
+	target = 'hrtc',
+	includes = '../include '+os.getenv('DAOROOT')+'/include/',
+	linkflags = my_link_flags,
+	ldflags = ['-ldao' , '-lpthread', '-lm', '-lcfitsio'] + my_ld_flags,
+	use = ['utils','toml'],
+	cflags = my_cflags + ['-Wall', '-Wextra', '-Werror', '-pipe', '-fdiagnostics-color=auto'],	
+)
+
+
+test_fits = bld.program(
+    source = 'test_fits.c',
+    target = 'test_fits',
+    includes = '../include ' + os.getenv('DAOROOT') + '/include/',
+    linkflags = my_link_flags + rpath_flags,
+    ldflags = ['-ldao', '-lpthread', '-lm', '-lcfitsio'] + my_ld_flags,
+    use = 'utils',
+    cflags = my_cflags + ['-Wall', '-Wextra', '-Werror', '-pipe', '-fdiagnostics-color=auto'],
+)
+
+test_toml = bld.program(
+    source = 'test_toml.c',
+    target = 'test_toml',
+    includes = '../include ' + os.getenv('DAOROOT') + '/include/',
+	linkflags = my_link_flags + rpath_flags,
+    ldflags = ['-ldao', '-lpthread', '-lm', '-lcfitsio'] + my_ld_flags,
+    use = ['utils','toml'],
+    cflags = my_cflags + ['-Wall', '-Wextra', '-Werror', '-pipe', '-fdiagnostics-color=auto'],
+)
+
+hrtc_new = bld.program(
+	source = 'hrtc_new.c',
+	target = 'hrtc_new',
+	includes = '../include '+os.getenv('DAOROOT')+'/include/',
+	linkflags = my_link_flags + rpath_flags,
+	ldflags = ['-ldao' , '-lpthread', '-lm', '-lcfitsio'] + my_ld_flags,
+	use = ['utils','toml'],
+	cflags = my_cflags + ['-Wall', '-Wextra', '-Werror', '-pipe', '-fdiagnostics-color=auto'],	
+)

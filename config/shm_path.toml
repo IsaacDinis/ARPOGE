@@ -1,0 +1,60 @@
+[time_domain_buff]
+modes_in_buf = '/tmp/modes_in_buf.shm'
+modes_out_buf = '/tmp/modes_out_buf.shm'
+pol_buf = '/tmp/pol_buf.shm'
+t = '/tmp/t.shm'
+
+[frequency_domain_buff]
+modes_in_fft = '/tmp/modes_fft.shm'
+modes_out_fft = '/tmp/commands_fft.shm'
+pol_fft = '/tmp/pol_fft.shm'
+f = '/tmp/f.shm'
+
+[K]
+#state_mat = '/tmp/state_mat.shm'
+K_mat_int = '/tmp/K_mat_int.shm'
+K_mat_dd = '/tmp/K_mat_dd.shm'
+K_mat_omgi = '/tmp/K_mat_omgi.shm'
+
+
+[G]
+latency = '/tmp/latency.shm'
+fs = '/tmp/fs.shm'
+delay = '/tmp/delay.shm'
+
+[settings]
+closed_loop_flag = '/tmp/closed_loop_flag.shm'
+controller_select = '/tmp/controller_select.shm'
+n_modes_dd = '/tmp/n_modes_dd.shm'
+n_modes_int = '/tmp/n_modes_int.shm'
+dd_update_rate = '/tmp/dd_update_rate.shm'
+dd_order = '/tmp/dd_order.shm'
+gain_margin = '/tmp/gain_margin.shm'
+n_fft = '/tmp/n_fft.shm'
+wait_time = '/tmp/wait_time.shm'
+record_time = '/tmp/record_time.shm'
+pyramid_select = '/tmp/pyramid_select.shm'
+reset_flag = '/tmp/reset_flag.shm'
+
+[S]
+S_dd = '/tmp/S_dd.shm'
+S_omgi = '/tmp/S_omgi.shm'
+S_int = '/tmp/S_int.shm'
+f_opti = '/tmp/f_opti.shm'
+
+[KL_mat]
+M2V = '/tmp/m2c.im.shm'
+M2S = '/tmp/KL2S.im.shm'
+S2M = '/tmp/S2M.shm'
+
+[telemetry]
+telemetry = '/tmp/telemetry.shm'
+telemetry_ts = '/tmp/telemetry_ts.shm'
+
+[HW]
+slopes_4sided = '/tmp/papyrus_slopes.im.shm'
+modes_in_custom = '/tmp/modes.shm'
+modes_in_3sided = '/tmp/computed_modes.im.shm'
+modes_in_4sided = '/tmp/papyrus_modes.im.shm'
+dm = '/tmp/dmCmd03.im.shm' 
+flat_dm = '/tmp/dmCmd00.im.shm'

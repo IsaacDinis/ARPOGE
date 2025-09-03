@@ -1,0 +1,27 @@
+#! /usr/bin/env python
+import os 
+import platform
+if platform.system() == "Darwin":
+    my_ld_flags = ['']
+    my_link_flags = ['-L'+os.getenv('DAOROOT')+'/lib/']
+    my_cxx_flags = ['-std=c++14']
+    my_cflags = ['-O3', '-ffast-math']
+else:
+    my_ld_flags = ['-lrt']
+    my_link_flags = ['-L'+os.getenv('DAOROOT')+'/lib/','-L'+os.getenv('DAOROOT')+'/lib64/']
+    my_cxx_flags = ['']
+    my_cflags = ['-Ofast']
+    my_defines = []
+
+bld.shlib(
+    source = 'utils.c',
+    includes = ['../include',os.getenv('DAOROOT') + '/include/'],
+    linkflags = my_link_flags,
+    cflags = my_cflags + ['-Wall', '-Wextra'],
+    ldflags = ['-ldao', '-lpthread', '-lm'] + my_ld_flags,
+    use = ['toml'],
+    target = 'utils',
+    name   = 'utils',
+    vnum   = '0.0.1'
+)
+

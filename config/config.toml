@@ -1,0 +1,45 @@
+[common]
+n_modes = 195
+n_voltages = 241
+fs = 500 #[Hz]
+delay = 2 
+n_act = 241
+
+[visualizer]
+n_fft = 1000
+buf_size = 5000
+update_rate = 0.033 #[s]
+
+[integrator]
+gain = 0.3
+
+[optimizer]
+order = 10
+max_order = 20
+n_modes = 195
+n_fft = 150
+n_fft_max = 1000
+update_rate = 30 #[s]
+
+
+[freq_mag_estimator]
+update_rate = 1 #[s]
+
+
+[calibration]
+wait_time = 0.01 #[s]
+n_modes = 195
+amp = 0.5
+
+[hrtc]
+max_voltage = 1
+
+[sem_nb]
+optimizer = 4
+calib = 5
+slopes2modes = 5
+hrtc = 6
+pol = 7
+fft = 8
+visualizer = 9
+rec = 9
