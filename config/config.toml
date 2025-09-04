@@ -1,6 +1,7 @@
 [common]
 n_modes = 195
 n_voltages = 241
+n_pixels = 240
 fs = 500 #[Hz]
 delay = 2 
 n_act = 241

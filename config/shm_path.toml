@@ -23,10 +23,10 @@ fs = '/tmp/fs.shm'
 delay = '/tmp/delay.shm'
 
 [settings]
-closed_loop_flag = '/tmp/closed_loop_flag.shm'
+closed_loop_state_flag = '/tmp/closed_loop_state_flag.shm'
 controller_select = '/tmp/controller_select.shm'
 n_modes_dd = '/tmp/n_modes_dd.shm'
-n_modes_int = '/tmp/n_modes_int.shm'
+n_modes_controlled = '/tmp/n_modes_controlled.shm'
 dd_update_rate = '/tmp/dd_update_rate.shm'
 dd_order = '/tmp/dd_order.shm'
 gain_margin = '/tmp/gain_margin.shm'
@@ -34,7 +34,11 @@ n_fft = '/tmp/n_fft.shm'
 wait_time = '/tmp/wait_time.shm'
 record_time = '/tmp/record_time.shm'
 pyramid_select = '/tmp/pyramid_select.shm'
+
+[event_flag]
 reset_flag = '/tmp/reset_flag.shm'
+K_mat_flag = '/tmp/K_mat_flag.shm'
+pyramid_flag = '/tmp/pyramid_flag.shm'
 
 [S]
 S_dd = '/tmp/S_dd.shm'
@@ -46,6 +50,7 @@ f_opti = '/tmp/f_opti.shm'
 M2V = '/tmp/m2c.im.shm'
 M2S = '/tmp/KL2S.im.shm'
 S2M = '/tmp/S2M.shm'
+V2M = '/tmp/V2M.shm'
 
 [telemetry]
 telemetry = '/tmp/telemetry.shm'
@@ -53,8 +58,12 @@ telemetry_ts = '/tmp/telemetry_ts.shm'
 
 [HW]
 slopes_4sided = '/tmp/papyrus_slopes.im.shm'
+slopes_3sided = '/tmp/papyrus_slopes.im.shm' #TODO change
 modes_in_custom = '/tmp/modes.shm'
 modes_in_3sided = '/tmp/computed_modes.im.shm'
-modes_in_4sided = '/tmp/papyrus_modes.im.shm'
+#modes_in_4sided = '/tmp/papyrus_modes.im.shm'
+modes_in_4sided = '/tmp/modes.shm'
 dm = '/tmp/dmCmd03.im.shm' 
 flat_dm = '/tmp/dmCmd00.im.shm'
+pixels_4sided = '/tmp/ocam2.im.shm'
+pixels_3sided = '/tmp/ocam2.im.shm' #TODO change

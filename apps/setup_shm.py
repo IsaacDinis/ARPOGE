@@ -45,14 +45,18 @@ delay = np.array([[config['common']['delay']]],dtype = np.float32)
 fs = np.array([[config['common']['fs']]],dtype = np.float32)
 latency = np.zeros((1,1),dtype = np.float32)
 
-closed_loop_flag = np.zeros((1,1),dtype = np.uint32)
 
+M2V = dao.shm(shm_path['KL_mat']['M2V']).get_data(check=False)
+V2M = np.linalg.pinv(M2V)
 
-n_modes_dd = np.zeros((1,1),dtype = np.uint32)
-n_modes_int = np.zeros((1,1),dtype = np.uint32)
+n_modes_dd = np.array([[n_modes]],dtype = np.uint32)
+n_modes_controlled = np.array([[n_modes]],dtype = np.uint32)
+
 record_time = np.zeros((1,1),dtype = np.float32)
-mutex_opti = np.zeros((1,1),dtype = np.uint32)
-reset_flag = np.zeros((1,1),dtype = np.uint32)
+
+uint32_0 = np.zeros((1,1),dtype = np.uint32)
+
+
 modes = np.zeros((n_modes,1),dtype=np.float32)
 
 dd_update_rate = np.array([[np.inf]],dtype = np.float32)
@@ -66,9 +70,6 @@ slopes_shm = dao.shm(shm_path['HW']['slopes_4sided'])
 slopes = slopes_shm.get_data()
 n_slopes = slopes.shape[0]
 S2M =np.zeros((n_modes,n_slopes),dtype=np.float32)
-
-controller_select = np.zeros((1,1),dtype = np.uint32)
-pyramid_select = np.zeros((1,1),dtype = np.uint32)
 
 n_fft_max = config['optimizer']['n_fft_max']
 
@@ -100,20 +101,22 @@ dao.shm(shm_path['G']['delay'],delay)
 dao.shm(shm_path['G']['fs'],fs)
 dao.shm(shm_path['G']['latency'],latency)
 
-dao.shm(shm_path['settings']['closed_loop_flag'],closed_loop_flag)
+dao.shm(shm_path['settings']['closed_loop_state_flag'],uint32_0)
 dao.shm(shm_path['settings']['n_modes_dd'],n_modes_dd)
-dao.shm(shm_path['settings']['n_modes_int'],n_modes_int)
-dao.shm(shm_path['settings']['reset_flag'],reset_flag)
+dao.shm(shm_path['settings']['n_modes_controlled'],n_modes_controlled)
+
 dao.shm(shm_path['settings']['dd_update_rate'],dd_update_rate)
 dao.shm(shm_path['settings']['dd_order'],dd_order)
-dao.shm(shm_path['settings']['controller_select'],controller_select)
-dao.shm(shm_path['settings']['pyramid_select'],pyramid_select)
+dao.shm(shm_path['settings']['controller_select'],uint32_0)
+dao.shm(shm_path['settings']['pyramid_select'],uint32_0)
 dao.shm(shm_path['settings']['gain_margin'],gain_margin)
 dao.shm(shm_path['settings']['wait_time'],wait_time)
 dao.shm(shm_path['settings']['n_fft'],n_fft_optimizer)
 dao.shm(shm_path['settings']['record_time'],record_time)
 
 dao.shm(shm_path['KL_mat']['S2M'],S2M)
+dao.shm(shm_path['KL_mat']['V2M'],V2M)
+
 dao.shm(shm_path['HW']['modes_in_custom'],modes)
 
 dao.shm(shm_path['S']['S_dd'],S_dd)
@@ -123,3 +126,7 @@ dao.shm(shm_path['S']['f_opti'],f_opti)
 
 dao.shm(shm_path['telemetry']['telemetry'],telemetry)
 dao.shm(shm_path['telemetry']['telemetry_ts'],telemetry_ts)
+
+dao.shm(shm_path['event_flag']['reset_flag'],uint32_0)
+dao.shm(shm_path['event_flag']['K_mat_flag'],uint32_0)
+dao.shm(shm_path['event_flag']['pyramid_flag'],uint32_0)

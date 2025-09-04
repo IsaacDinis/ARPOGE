@@ -1,4 +1,5 @@
 .lock-waf_linux_build
 build/*
 results/*
+*.fits
 !.gitkeep
