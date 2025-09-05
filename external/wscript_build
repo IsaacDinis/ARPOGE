@@ -12,6 +12,10 @@ else:
     my_cxx_flags = ['']
     my_cflags = ['-Ofast']
     my_defines = []
+lib_dir = os.path.join(bld.path.abspath(), '../lib')
+if not os.path.exists(lib_dir):
+    os.makedirs(lib_dir)
+
 
 bld.shlib(
 	source = 'toml.c',
@@ -21,6 +25,8 @@ bld.shlib(
 	ldflags = ['-ldao', '-lpthread', '-lm'] + my_ld_flags,
 	target = 'toml',
 	name   = 'toml',
-	vnum   = '0.0.1')
+	vnum   = '0.0.1',
+    install_path =lib_dir
+	)
 
 

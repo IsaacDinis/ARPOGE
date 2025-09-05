@@ -5,6 +5,7 @@
 #include <signal.h>
 #include <stdbool.h>
 #include <sched.h>
+#include <time.h>
 #include "dao.h"
 #include "toml.h"
 #include "utils.h"
@@ -48,7 +49,7 @@ static void endme(){
 
 int load_shm_path() {
     char errbuf[200];
-    toml_table_t *root = load_toml("../../config/shm_path.toml", errbuf, sizeof(errbuf));
+    toml_table_t *root = load_toml("../config/shm_path.toml", errbuf, sizeof(errbuf));
     if (!root) return 1;
 
     toml_table_t *HW = toml_table_in(root, "HW");
@@ -93,7 +94,7 @@ int load_shm_path() {
 
 int load_config() {
     char errbuf[200];
-    toml_table_t *root = load_toml("../../config/config.toml", errbuf, sizeof(errbuf));
+    toml_table_t *root = load_toml("../config/config.toml", errbuf, sizeof(errbuf));
     if (!root) return 1;
 
     toml_table_t *common    = toml_table_in(root, "common");
@@ -206,9 +207,8 @@ int real_time_loop(){
 
   float* state_mat = calloc((2 * config.max_order + 1) * config.n_modes, sizeof(float));
   float* modes_out = calloc(config.n_modes, sizeof(float));
-
   bool saturated = 0;
-
+  struct timespec timeout;
   IMAGE *modes_in_shm = (IMAGE*) malloc(sizeof(IMAGE));
   IMAGE *dm_shm = (IMAGE*) malloc(sizeof(IMAGE));
   IMAGE *M2V_shm = (IMAGE*) malloc(sizeof(IMAGE));
@@ -234,46 +234,51 @@ int real_time_loop(){
 
   load_K_mat(K_mat_shm,controller_select_shm->array.UI32[0]);
   select_pyramid(modes_in_shm, pyramid_select_shm->array.UI32[0]);
-
+  // printf("n_slopes = %d\n\n", modes_in_shm->md[0].size[0]);
   while(!end){
 
     if(check_flag(K_mat_flag_shm))load_K_mat(K_mat_shm,controller_select_shm->array.UI32[0]);
     if(check_flag(pyramid_flag_shm))select_pyramid(modes_in_shm, pyramid_select_shm->array.UI32[0]);
     if(check_flag(reset_flag_shm)) reset_state_mat(state_mat);
     saturated = 0;
-    daoShmWaitForSemaphore(modes_in_shm, config.sem_nb);
+    clock_gettime(CLOCK_REALTIME, &timeout);
+    timeout.tv_sec += 1; // 1 second timeout
+    if (daoShmWaitForSemaphoreTimeout(modes_in_shm, config.sem_nb, &timeout) != -1){
+      // printf("n_slopes = %f\n\n", modes_in_shm->array.F[0]);
+      // printf("n_slopes = %d\n\n", modes_in_shm->md[0].size[0]);
+      dm_shm->md[0].cnt2 = modes_in_shm->md[0].cnt2;
 
-    dm_shm->md[0].cnt2 = modes_in_shm->md[0].cnt2;
-
-    memmove(&state_mat[config.n_modes], state_mat, config.n_modes * (2 * config.max_order) * sizeof(float));
-    memcpy(&state_mat[0], modes_in_shm->array.F, config.n_modes * sizeof(float)); 
-    
-    for (uint32_t i = 0; i < (uint32_t) config.n_modes; i++) {
-      modes_out[i] = 0;
-      if(closed_loop_state_flag_shm->array.UI32[0]&&i<n_modes_controlled_shm->array.UI32[0]){
-        for (int j = 0; j < 2 * config.max_order + 1; j++) {
-          modes_out[i] += state_mat[j * config.n_modes + i] * K_mat_shm->array.F[j * config.n_modes + i];
-        }
-      }
-    }
-    for (int i = 0; i < config.n_act; i++) {
-        dm_shm->array.F[i] = 0;
-        for (int j = 0; j < config.n_modes; j++) {
-            dm_shm->array.F[i] -= M2V_shm->array.F[i * config.n_modes + j] * modes_out[j];
-        }
-        dm_shm->array.F[i] = clamp(dm_shm->array.F[i], config.max_voltage, &saturated);
-    }
-    if (saturated) {
-      for (int j = 0; j < config.n_modes; j++) {
-          modes_out[j] = 0.0f;
-          for (int i = 0; i < config.n_act; i++) {
-              modes_out[j] -= V2M_shm->array.F[j * config.n_act + i] * dm_shm->array.F[i];
+      memmove(&state_mat[config.n_modes], state_mat, config.n_modes * (2 * config.max_order) * sizeof(float));
+      memcpy(&state_mat[0], modes_in_shm->array.F, config.n_modes * sizeof(float)); 
+      
+      for (uint32_t i = 0; i < (uint32_t) config.n_modes; i++) {
+        modes_out[i] = 0;
+        // if(closed_loop_state_flag_shm->array.UI32[0]&&i<n_modes_controlled_shm->array.UI32[0]){
+        if(closed_loop_state_flag_shm->array.UI32[0]&&i<150){ // TODO
+          for (int j = 0; j < 2 * config.max_order + 1; j++) {
+            modes_out[i] += state_mat[j * config.n_modes + i] * K_mat_shm->array.F[j * config.n_modes + i];
           }
+        }
       }
-    }
-    memcpy(&state_mat[config.max_order * config.n_modes], modes_out, config.n_modes * sizeof(float));
+      for (int i = 0; i < config.n_act; i++) {
+          dm_shm->array.F[i] = 0;
+          for (int j = 0; j < config.n_modes; j++) {
+              dm_shm->array.F[i] -= M2V_shm->array.F[i * config.n_modes + j] * modes_out[j];
+          }
+          dm_shm->array.F[i] = clamp(dm_shm->array.F[i], config.max_voltage, &saturated);
+      }
+      if (saturated) {
+        for (int j = 0; j < config.n_modes; j++) {
+            modes_out[j] = 0.0f;
+            for (int i = 0; i < config.n_act; i++) {
+                modes_out[j] -= V2M_shm->array.F[j * config.n_act + i] * dm_shm->array.F[i];
+            }
+        }
+      }
+      memcpy(&state_mat[config.max_order * config.n_modes], modes_out, config.n_modes * sizeof(float));
 
-    daoShmImagePart2ShmFinalize(dm_shm);
+      daoShmImagePart2ShmFinalize(dm_shm);
+    }
   }
 
   free(modes_out);

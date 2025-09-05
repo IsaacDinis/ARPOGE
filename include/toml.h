@@ -172,4 +172,6 @@ TOML_EXTERN int toml_rtod(toml_raw_t s, double *ret);
 TOML_EXTERN int toml_rtod_ex(toml_raw_t s, double *ret, char *buf, int buflen);
 TOML_EXTERN int toml_rtots(toml_raw_t s, toml_timestamp_t *ret);
 
+
+
 #endif /* TOML_H */

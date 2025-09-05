@@ -67,3 +67,9 @@ dm = '/tmp/dmCmd03.im.shm'
 flat_dm = '/tmp/dmCmd00.im.shm'
 pixels_4sided = '/tmp/ocam2.im.shm'
 pixels_3sided = '/tmp/ocam2.im.shm' #TODO change
+
+[calibration]
+mask = '/tmp/mask.shm'
+bias_image = '/tmp/bias_image.shm'
+ref_img_norm = '/tmp/ref_img_norm.shm'
+S2M = '/tmp/S2M.shm' 

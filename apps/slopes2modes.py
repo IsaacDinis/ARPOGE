@@ -30,15 +30,11 @@ def bias_correction(image, bias_image):
 
     image = np.asarray(image)
     bias_image = np.asarray(bias_image)
-    if image.shape != bias_image.shape:
-        raise ValueError("The image and bias image must have the same shape.")
     corrected_image = image - bias_image
     return corrected_image
 
-def normalize_image(image, mask, bias_img=None):
+def normalize_image(image, mask, bias_img):
 
-    if bias_img is None:
-        bias_img = np.zeros_like(image)
     bias_corrected_image = bias_correction(image, bias_img)
     masked_image = bias_corrected_image * mask
     norm_flux = np.abs(np.sum(masked_image))
@@ -47,7 +43,7 @@ def normalize_image(image, mask, bias_img=None):
     return normalized_image
 
 
-def get_slopes_image(mask, bias_image, reference_image_normalized, pyr_img=None, setup=None, **kwargs):
+def get_slopes_image(mask, bias_image, reference_image_normalized):
 
     pyr_img = pixels_shm.get_data(check=True, semNb=5)
 
@@ -64,6 +60,10 @@ valid_pixels_indices = np.where(mask > 0)
 
 
 RM_S2KL = np.linalg.pinv(IM_KL2S, rcond=0.10)
+
+# hdu = fits.PrimaryHDU(RM_S2KL.astype(np.float32).T)
+# hdu.writeto(os.path.join(calib_data_dir, "RM_S2KL.fits"),overwrite = True)
+
 print(f"Shape of the reconstruction matrix: {RM_S2KL.shape}")
 RM_S2KL_cp = cp.asarray(RM_S2KL)
 

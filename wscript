@@ -74,16 +74,15 @@ def build(bld):
 	bld.recurse('external')
 	bld.recurse('apps')
 	
-	# include
-	files = glob.glob('include/*.h')
-	for file in files:
-		bld.install_files(bld.env.PREFIX+'/include', file, relative_trick=False)
-	# apps
-	files = glob.glob('apps/*.py')
-	for file in files:
-		bld.install_files(bld.env.PREFIX+'/bin', file, chmod=0o0755, relative_trick=False)
-	# script
-	files = glob.glob('scripts/*')
-	for file in files:
-		bld.install_files(bld.env.PREFIX+'/bin', file, chmod=0o0755, relative_trick=False)
-
+	# # include
+	# files = glob.glob('include/*.h')
+	# for file in files:
+	# 	bld.install_files(bld.env.PREFIX+'/include', file, relative_trick=False)
+	# # apps
+	# files = glob.glob('apps/*.py')
+	# for file in files:
+	# 	bld.install_files(bld.env.PREFIX+'/bin', file, chmod=0o0755, relative_trick=False)
+	# # script
+	# files = glob.glob('scripts/*')
+	# for file in files:
+	# 	bld.install_files(bld.env.PREFIX+'/bin', file, chmod=0o0755, relative_trick=False)

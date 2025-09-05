@@ -14,7 +14,6 @@
 #include <stdbool.h> 
 #include "toml.h"
 
-
 // Write double array to FITS file 
 int write_fits_double_1d(const char *filename, double *array, long n) { 
     fitsfile *fptr; 
@@ -254,8 +253,8 @@ double *read_fits_2d(const char *filename, long *nx_out, long *ny_out) {
         return NULL;
     }
 
-    long nx = naxes[0]; // columns
-    long ny = naxes[1]; // rows
+    long nx = naxes[1]; // columns
+    long ny = naxes[0]; // rows
 
     array = malloc(sizeof(double) * nx * ny);
     if (!array) {
@@ -295,4 +294,3 @@ toml_table_t* load_toml(const char *rel_path, char *errbuf, size_t errlen) {
     if (!tbl) fprintf(stderr, "TOML error: %s\n", errbuf);
     return tbl;
 }
-

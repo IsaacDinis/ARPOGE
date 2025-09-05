@@ -1,3 +1,4 @@
+#! /usr/bin/env python
 
 import os
 import platform
@@ -13,12 +14,9 @@ else:
 	my_cflags = ['-Ofast']
 	my_link_flags = ['-L'+os.getenv('DAOROOT')+'/lib/','-L'+os.getenv('DAOROOT')+'/lib64/']
 
-libdirs = [
-    bld.path.get_bld().parent.find_node('src').abspath(),
-    bld.path.get_bld().parent.find_node('external').abspath(),
-]
-
-rpath_flags = [f'-Wl,-rpath,{d}' for d in libdirs]
+bin_dir = os.path.join(bld.path.abspath(), '../bin')
+if not os.path.exists(bin_dir):
+    os.makedirs(bin_dir)
 
 hrtc = bld.program(
 	source = 'hrtc.c',
@@ -27,7 +25,8 @@ hrtc = bld.program(
 	linkflags = my_link_flags,
 	ldflags = ['-ldao' , '-lpthread', '-lm', '-lcfitsio'] + my_ld_flags,
 	use = ['utils','toml'],
-	cflags = my_cflags + ['-Wall', '-Wextra', '-Werror', '-pipe', '-fdiagnostics-color=auto'],	
+	cflags = my_cflags + ['-Wall', '-Wextra', '-Werror', '-pipe', '-fdiagnostics-color=auto'],
+    install_path =bin_dir
 )
 
 
@@ -35,28 +34,42 @@ test_fits = bld.program(
     source = 'test_fits.c',
     target = 'test_fits',
     includes = '../include ' + os.getenv('DAOROOT') + '/include/',
-    linkflags = my_link_flags + rpath_flags,
+    linkflags = my_link_flags + ['-Wl,--no-as-needed'],
     ldflags = ['-ldao', '-lpthread', '-lm', '-lcfitsio'] + my_ld_flags,
-    use = 'utils',
+    use = ['utils','toml'],
     cflags = my_cflags + ['-Wall', '-Wextra', '-Werror', '-pipe', '-fdiagnostics-color=auto'],
+    install_path =bin_dir
 )
 
 test_toml = bld.program(
     source = 'test_toml.c',
     target = 'test_toml',
     includes = '../include ' + os.getenv('DAOROOT') + '/include/',
-	linkflags = my_link_flags + rpath_flags,
+	linkflags = my_link_flags ,
     ldflags = ['-ldao', '-lpthread', '-lm', '-lcfitsio'] + my_ld_flags,
     use = ['utils','toml'],
     cflags = my_cflags + ['-Wall', '-Wextra', '-Werror', '-pipe', '-fdiagnostics-color=auto'],
+    install_path =bin_dir
 )
 
 hrtc_new = bld.program(
 	source = 'hrtc_new.c',
 	target = 'hrtc_new',
 	includes = '../include '+os.getenv('DAOROOT')+'/include/',
-	linkflags = my_link_flags + rpath_flags,
+	linkflags = my_link_flags,
 	ldflags = ['-ldao' , '-lpthread', '-lm', '-lcfitsio'] + my_ld_flags,
 	use = ['utils','toml'],
 	cflags = my_cflags + ['-Wall', '-Wextra', '-Werror', '-pipe', '-fdiagnostics-color=auto'],	
+    install_path =bin_dir
+)
+
+pix2modes = bld.program(
+	source = 'pix2modes.c',
+	target = 'pix2modes',
+	includes = '../include '+os.getenv('DAOROOT')+'/include/',
+	linkflags = my_link_flags,
+	ldflags = ['-ldao' , '-lpthread', '-lm', '-lcfitsio'] + my_ld_flags,
+	use = ['utils','toml'],
+	cflags = my_cflags + ['-Wall', '-Wextra', '-pipe', '-fdiagnostics-color=auto'],	
+    install_path =bin_dir
 )

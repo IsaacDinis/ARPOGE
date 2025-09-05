@@ -25,10 +25,11 @@ int main() {
     save_array_to_fits_2d("../../results/test_2d.fits",&matrix[0][0],2,3);
     long nx, ny;
 	double *matrix2 = read_fits_2d("../../results/test_2d.fits", &nx, &ny);
-
-	for (long y=0; y<ny; y++) {
-	    for (long x=0; x<nx; x++) {
-	        printf("%f ", matrix2[y*nx + x]);
+	printf("nx = %ld\n ", nx);
+	printf("ny = %ld\n ", ny);
+	for (long x=0; x<nx; x++) {
+	    for (long y=0; y<ny; y++) {
+	        printf("%f ", matrix2[x*ny + y]);
 	    }
 	    printf("\n");
 	}

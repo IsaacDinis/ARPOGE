@@ -13,15 +13,20 @@ else:
     my_cflags = ['-Ofast']
     my_defines = []
 
-bld.shlib(
+lib_dir = os.path.join(bld.path.abspath(), '../lib')
+if not os.path.exists(lib_dir):
+    os.makedirs(lib_dir)
+
+utils = bld.shlib(
     source = 'utils.c',
     includes = ['../include',os.getenv('DAOROOT') + '/include/'],
-    linkflags = my_link_flags,
+    linkflags = my_link_flags, #+ rpath_flags,
     cflags = my_cflags + ['-Wall', '-Wextra'],
-    ldflags = ['-ldao', '-lpthread', '-lm'] + my_ld_flags,
+    ldflags = ['-ldao', '-lpthread', '-lm', '-lcfitsio'] + my_ld_flags,
     use = ['toml'],
     target = 'utils',
     name   = 'utils',
-    vnum   = '0.0.1'
+    vnum   = '0.0.1',
+    install_path =lib_dir
 )
 

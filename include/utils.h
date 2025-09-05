@@ -15,4 +15,5 @@ double *read_fits_2d(const char *filename, long *nx_out, long *ny_out);
 char* relative_path_write(const char *rel_folder);
 char* relative_path_read(const char *rel_path);
 toml_table_t* load_toml(const char *rel_path, char *errbuf, size_t errlen);
+
 #endif /* UTILS_H */

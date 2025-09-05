@@ -3,15 +3,16 @@ import dao
 import numpy as np
 import ctypes
 import os
+from astropy.io import fits
 daoLogLevel = ctypes.c_int.in_dll(dao.daoLib, "daoLogLevel")
 daoLogLevel.value=0
 
 this_script_dir = os.path.dirname(os.path.abspath(__file__))
-
 with open(os.path.join(this_script_dir,'../config/config.toml'), 'r') as f:
     config = toml.load(f)
 with open(os.path.join(this_script_dir,'../config/shm_path.toml'), 'r') as f:
     shm_path = toml.load(f)
+
 
 # load parameters
 n_fft_display = config['visualizer']['n_fft']
@@ -69,7 +70,7 @@ dd_order = np.array([[20]],dtype = np.uint32)
 slopes_shm = dao.shm(shm_path['HW']['slopes_4sided'])
 slopes = slopes_shm.get_data()
 n_slopes = slopes.shape[0]
-S2M =np.zeros((n_modes,n_slopes),dtype=np.float32)
+S2M_custom =np.zeros((n_modes,n_slopes),dtype=np.float32)
 
 n_fft_max = config['optimizer']['n_fft_max']
 
@@ -81,6 +82,15 @@ f_opti[:n_fft_optimizer[0][0]]= np.linspace(0.1,fs[0][0]/2,n_fft_optimizer[0][0]
 
 n_act = dm_shm.get_data().shape[0]
 flat = np.zeros((n_act,1),dtype = np.float32)
+
+#Load calibratition matrices
+calib_data_dir = os.path.join(this_script_dir, "../calib_data/")
+mask = fits.getdata(os.path.join(calib_data_dir, "mask.fits")).astype(np.uint16)
+bias_image = fits.getdata(os.path.join(calib_data_dir, "bias_image.fits")).astype(np.uint16)
+ref_img_norm = fits.getdata(os.path.join(calib_data_dir, "reference_image_normalized.fits")).astype(np.float32)
+S2M = fits.getdata(os.path.join(calib_data_dir, "RM_S2KL.fits")).astype(np.float32)
+
+
 
 dao.shm(shm_path['time_domain_buff']['modes_in_buf'],modes_in_buf)
 dao.shm(shm_path['time_domain_buff']['modes_out_buf'],modes_out_buf)
@@ -114,7 +124,7 @@ dao.shm(shm_path['settings']['wait_time'],wait_time)
 dao.shm(shm_path['settings']['n_fft'],n_fft_optimizer)
 dao.shm(shm_path['settings']['record_time'],record_time)
 
-dao.shm(shm_path['KL_mat']['S2M'],S2M)
+dao.shm(shm_path['KL_mat']['S2M'],S2M_custom)
 dao.shm(shm_path['KL_mat']['V2M'],V2M)
 
 dao.shm(shm_path['HW']['modes_in_custom'],modes)
@@ -130,3 +140,9 @@ dao.shm(shm_path['telemetry']['telemetry_ts'],telemetry_ts)
 dao.shm(shm_path['event_flag']['reset_flag'],uint32_0)
 dao.shm(shm_path['event_flag']['K_mat_flag'],uint32_0)
 dao.shm(shm_path['event_flag']['pyramid_flag'],uint32_0)
+
+
+dao.shm(shm_path['calibration']['mask'],mask)
+dao.shm(shm_path['calibration']['bias_image'],bias_image)
+dao.shm(shm_path['calibration']['ref_img_norm'],ref_img_norm)
+dao.shm(shm_path['calibration']['S2M'],S2M)
