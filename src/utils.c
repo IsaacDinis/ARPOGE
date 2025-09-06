@@ -14,6 +14,12 @@
 #include <stdbool.h> 
 #include "toml.h"
 
+double get_time_seconds() {
+    struct timespec ts;
+    clock_gettime(CLOCK_REALTIME, &ts);
+    return (double)ts.tv_sec + (double)ts.tv_nsec / 1e9; 
+}
+
 // Write double array to FITS file 
 int write_fits_double_1d(const char *filename, double *array, long n) { 
     fitsfile *fptr; 

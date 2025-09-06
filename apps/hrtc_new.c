@@ -10,34 +10,39 @@
 #include "toml.h"
 #include "utils.h"
 
+#define TIME_VERBOSE 1
+#define PRINT_RATE 5
+#define MAX_FS 1000
 // ---------- Structures ----------
 
 struct {
-    char *modes_in_4sided;
-    char *modes_in_custom;
-    char *modes_in_3sided;
-    char *pyramid_select;
-    char *dm;
-    char *M2V;
-    char *V2M;
-    char *reset_flag;
-    char *controller_select;
-    char *closed_loop_state_flag;
-    char *K_mat_int;
-    char *K_mat_dd;
-    char *K_mat_omgi;
-    char *K_mat_flag;
-    char *pyramid_flag;
-    char *n_modes_controlled;
+  char *modes_in_4sided;
+  char *modes_in_custom;
+  char *modes_in_3sided;
+  char *pyramid_select;
+  char *dm;
+  char *M2V;
+  char *V2M;
+  char *reset_flag;
+  char *controller_select;
+  char *closed_loop_state_flag;
+  char *K_mat_int;
+  char *K_mat_dd;
+  char *K_mat_omgi;
+  char *K_mat_flag;
+  char *pyramid_flag;
+  char *n_modes_controlled;
+  char *telemetry;
+  char *telemetry_ts;
 
 } shm_path;
 
 struct {
-    int64_t sem_nb;
-    int64_t n_modes;
-    int64_t n_act;
-    int64_t max_order;
-    double  max_voltage;
+  int64_t sem_nb;
+  int64_t n_modes;
+  int64_t n_act;
+  int64_t max_order;
+  double  max_voltage;
 } config;
 
 // ---------- Helpers ----------
@@ -48,91 +53,98 @@ static void endme(){
 }
 
 int load_shm_path() {
-    char errbuf[200];
-    toml_table_t *root = load_toml("../config/shm_path.toml", errbuf, sizeof(errbuf));
-    if (!root) return 1;
+  char errbuf[200];
+  toml_table_t *root = load_toml("../config/shm_path.toml", errbuf, sizeof(errbuf));
+  if (!root) return 1;
 
-    toml_table_t *HW = toml_table_in(root, "HW");
-    toml_table_t *settings = toml_table_in(root, "settings");
-    toml_table_t *KL_mat = toml_table_in(root, "KL_mat");
-    toml_table_t *K = toml_table_in(root, "K");
-    toml_table_t *event_flag = toml_table_in(root, "event_flag");
+  toml_table_t *HW = toml_table_in(root, "HW");
+  toml_table_t *settings = toml_table_in(root, "settings");
+  toml_table_t *KL_mat = toml_table_in(root, "KL_mat");
+  toml_table_t *K = toml_table_in(root, "K");
+  toml_table_t *event_flag = toml_table_in(root, "event_flag");
+  toml_table_t *telemetry = toml_table_in(root, "telemetry");
 
-    if (HW) {
-        toml_rtos(toml_raw_in(HW, "modes_in_4sided"), &shm_path.modes_in_4sided);  
-        toml_rtos(toml_raw_in(HW, "modes_in_custom"), &shm_path.modes_in_custom);
-        toml_rtos(toml_raw_in(HW, "modes_in_3sided"), &shm_path.modes_in_3sided);
-        toml_rtos(toml_raw_in(HW, "dm"),              &shm_path.dm);
-    }
-    
-    if (KL_mat){
-      toml_rtos(toml_raw_in(KL_mat, "M2V"),  &shm_path.M2V);
-      toml_rtos(toml_raw_in(KL_mat, "V2M"),  &shm_path.V2M);
-    } 
-    
-    if (settings) {
-        toml_rtos(toml_raw_in(settings, "pyramid_select"),    &shm_path.pyramid_select);
-        toml_rtos(toml_raw_in(settings, "controller_select"), &shm_path.controller_select);
-        toml_rtos(toml_raw_in(settings, "closed_loop_state_flag"),  &shm_path.closed_loop_state_flag);
-        toml_rtos(toml_raw_in(settings, "n_modes_controlled"),  &shm_path.n_modes_controlled);
-    }
+  if (HW) {
+    toml_rtos(toml_raw_in(HW, "modes_in_4sided"), &shm_path.modes_in_4sided);  
+    toml_rtos(toml_raw_in(HW, "modes_in_custom"), &shm_path.modes_in_custom);
+    toml_rtos(toml_raw_in(HW, "modes_in_3sided"), &shm_path.modes_in_3sided);
+    toml_rtos(toml_raw_in(HW, "dm"),              &shm_path.dm);
+  }
+  
+  if (KL_mat){
+    toml_rtos(toml_raw_in(KL_mat, "M2V"),  &shm_path.M2V);
+    toml_rtos(toml_raw_in(KL_mat, "V2M"),  &shm_path.V2M);
+  } 
+  
+  if (settings) {
+    toml_rtos(toml_raw_in(settings, "pyramid_select"),    &shm_path.pyramid_select);
+    toml_rtos(toml_raw_in(settings, "controller_select"), &shm_path.controller_select);
+    toml_rtos(toml_raw_in(settings, "closed_loop_state_flag"),  &shm_path.closed_loop_state_flag);
+    toml_rtos(toml_raw_in(settings, "n_modes_controlled"),  &shm_path.n_modes_controlled);
+  }
 
-    if (K) {
-        toml_rtos(toml_raw_in(K, "K_mat_int"),  &shm_path.K_mat_int);
-        toml_rtos(toml_raw_in(K, "K_mat_dd"),   &shm_path.K_mat_dd);
-        toml_rtos(toml_raw_in(K, "K_mat_omgi"), &shm_path.K_mat_omgi);
-    }
-    if (event_flag) {
-        toml_rtos(toml_raw_in(event_flag, "reset_flag"),   &shm_path.reset_flag);
-        toml_rtos(toml_raw_in(event_flag, "K_mat_flag"),   &shm_path.K_mat_flag);
-        toml_rtos(toml_raw_in(event_flag, "pyramid_flag"), &shm_path.pyramid_flag);
-    }
+  if (K) {
+    toml_rtos(toml_raw_in(K, "K_mat_int"),  &shm_path.K_mat_int);
+    toml_rtos(toml_raw_in(K, "K_mat_dd"),   &shm_path.K_mat_dd);
+    toml_rtos(toml_raw_in(K, "K_mat_omgi"), &shm_path.K_mat_omgi);
+  }
+  if (event_flag) {
+    toml_rtos(toml_raw_in(event_flag, "reset_flag"),   &shm_path.reset_flag);
+    toml_rtos(toml_raw_in(event_flag, "K_mat_flag"),   &shm_path.K_mat_flag);
+    toml_rtos(toml_raw_in(event_flag, "pyramid_flag"), &shm_path.pyramid_flag);
+  }
+  if (telemetry) {
+    toml_rtos(toml_raw_in(telemetry, "telemetry"),   &shm_path.telemetry);
+    toml_rtos(toml_raw_in(telemetry, "telemetry_ts"),   &shm_path.telemetry_ts);
+  }
 
-    toml_free(root);
-    return 0;
+  toml_free(root);
+  return 0;
 }
 
 int load_config() {
-    char errbuf[200];
-    toml_table_t *root = load_toml("../config/config.toml", errbuf, sizeof(errbuf));
-    if (!root) return 1;
+  char errbuf[200];
+  toml_table_t *root = load_toml("../config/config.toml", errbuf, sizeof(errbuf));
+  if (!root) return 1;
 
-    toml_table_t *common    = toml_table_in(root, "common");
-    toml_table_t *hrtc      = toml_table_in(root, "hrtc");
-    toml_table_t *sem_nb    = toml_table_in(root, "sem_nb");
-    toml_table_t *optimizer = toml_table_in(root, "optimizer"); 
+  toml_table_t *common    = toml_table_in(root, "common");
+  toml_table_t *hrtc      = toml_table_in(root, "hrtc");
+  toml_table_t *sem_nb    = toml_table_in(root, "sem_nb");
+  toml_table_t *optimizer = toml_table_in(root, "optimizer"); 
 
-    if (common){    
-      toml_rtoi(toml_raw_in(common, "n_modes"), &config.n_modes);
-      toml_rtoi(toml_raw_in(common, "n_act"),   &config.n_act);
-    }
+  if (common){    
+    toml_rtoi(toml_raw_in(common, "n_modes"), &config.n_modes);
+    toml_rtoi(toml_raw_in(common, "n_act"),   &config.n_act);
+  }
 
-    if (hrtc)      toml_rtod(toml_raw_in(hrtc, "max_voltage"),     &config.max_voltage);
-    if (sem_nb)    toml_rtoi(toml_raw_in(sem_nb, "hrtc"),          &config.sem_nb);
-    if (optimizer) toml_rtoi(toml_raw_in(optimizer, "max_order"),  &config.max_order);
+  if (hrtc)      toml_rtod(toml_raw_in(hrtc, "max_voltage"),     &config.max_voltage);
+  if (sem_nb)    toml_rtoi(toml_raw_in(sem_nb, "hrtc"),          &config.sem_nb);
+  if (optimizer) toml_rtoi(toml_raw_in(optimizer, "max_order"),  &config.max_order);
 
-    toml_free(root);
-    return 0;
+  toml_free(root);
+  return 0;
 }
 
 // ---------- Free helpers ----------
 
 void free_shm_path() {
-    free(shm_path.modes_in_4sided);
-    free(shm_path.modes_in_custom);
-    free(shm_path.modes_in_3sided);
-    free(shm_path.dm);
-    free(shm_path.pyramid_select);
-    free(shm_path.reset_flag);
-    free(shm_path.controller_select);
-    free(shm_path.closed_loop_state_flag);
-    free(shm_path.M2V);
-    free(shm_path.V2M);
-    free(shm_path.K_mat_int);
-    free(shm_path.K_mat_dd);
-    free(shm_path.K_mat_omgi);
-    free(shm_path.K_mat_flag);
-    free(shm_path.pyramid_flag);
+  free(shm_path.modes_in_4sided);
+  free(shm_path.modes_in_custom);
+  free(shm_path.modes_in_3sided);
+  free(shm_path.dm);
+  free(shm_path.pyramid_select);
+  free(shm_path.reset_flag);
+  free(shm_path.controller_select);
+  free(shm_path.closed_loop_state_flag);
+  free(shm_path.M2V);
+  free(shm_path.V2M);
+  free(shm_path.K_mat_int);
+  free(shm_path.K_mat_dd);
+  free(shm_path.K_mat_omgi);
+  free(shm_path.K_mat_flag);
+  free(shm_path.pyramid_flag);
+  free(shm_path.telemetry);
+  free(shm_path.telemetry_ts);
 }
 
 // int load_K_mat(float* K_mat){
@@ -221,6 +233,8 @@ int real_time_loop(){
   IMAGE *controller_select_shm = (IMAGE*) malloc(sizeof(IMAGE));
   IMAGE *pyramid_select_shm = (IMAGE*) malloc(sizeof(IMAGE));
   IMAGE *n_modes_controlled_shm = (IMAGE*) malloc(sizeof(IMAGE));
+  IMAGE *telemetry_shm = (IMAGE*) malloc(sizeof(IMAGE));
+  IMAGE *telemetry_ts_shm = (IMAGE*) malloc(sizeof(IMAGE));
   daoShmShm2Img(shm_path.pyramid_select, pyramid_select_shm);
   daoShmShm2Img(shm_path.controller_select, controller_select_shm);
   daoShmShm2Img(shm_path.dm, dm_shm);
@@ -231,9 +245,23 @@ int real_time_loop(){
   daoShmShm2Img(shm_path.pyramid_flag, pyramid_flag_shm);
   daoShmShm2Img(shm_path.closed_loop_state_flag, closed_loop_state_flag_shm);
   daoShmShm2Img(shm_path.n_modes_controlled, n_modes_controlled_shm);
+  daoShmShm2Img(shm_path.telemetry, telemetry_shm);
+  daoShmShm2Img(shm_path.telemetry_ts, telemetry_ts_shm);
 
   load_K_mat(K_mat_shm,controller_select_shm->array.UI32[0]);
   select_pyramid(modes_in_shm, pyramid_select_shm->array.UI32[0]);
+  double modes_out_ts;
+  double modes_in_ts;
+  #if TIME_VERBOSE
+    double* loop_time_array = calloc((int)(PRINT_RATE*MAX_FS), sizeof(double));
+    double last_loop_time = get_time_seconds();
+    double computation_time = 0, wfs_time = 0;
+    int counter = 0;
+    double time_at_last_print = get_time_seconds();
+    double start_wfs, now, start_compute, dt;
+
+  #endif
+
   // printf("n_slopes = %d\n\n", modes_in_shm->md[0].size[0]);
   while(!end){
 
@@ -243,9 +271,20 @@ int real_time_loop(){
     saturated = 0;
     clock_gettime(CLOCK_REALTIME, &timeout);
     timeout.tv_sec += 1; // 1 second timeout
+    #if TIME_VERBOSE
+      now = get_time_seconds();
+      dt = now - last_loop_time;
+      loop_time_array[counter] = dt;
+      last_loop_time = now;
+      start_wfs = get_time_seconds();
+    #endif
     if (daoShmWaitForSemaphoreTimeout(modes_in_shm, config.sem_nb, &timeout) != -1){
-      // printf("n_slopes = %f\n\n", modes_in_shm->array.F[0]);
-      // printf("n_slopes = %d\n\n", modes_in_shm->md[0].size[0]);
+      #if TIME_VERBOSE
+        wfs_time += get_time_seconds() - start_wfs;
+        start_compute = get_time_seconds();
+      #endif
+
+      modes_in_ts = (double)modes_in_shm[0].md[0].atime.ts.tv_sec + (double)modes_in_shm[0].md[0].atime.ts.tv_nsec / 1e9;
       dm_shm->md[0].cnt2 = modes_in_shm->md[0].cnt2;
 
       memmove(&state_mat[config.n_modes], state_mat, config.n_modes * (2 * config.max_order) * sizeof(float));
@@ -267,6 +306,9 @@ int real_time_loop(){
           }
           dm_shm->array.F[i] = clamp(dm_shm->array.F[i], config.max_voltage, &saturated);
       }
+      daoShmImagePart2ShmFinalize(dm_shm);
+      modes_out_ts = get_time_seconds();
+
       if (saturated) {
         for (int j = 0; j < config.n_modes; j++) {
             modes_out[j] = 0.0f;
@@ -277,8 +319,59 @@ int real_time_loop(){
       }
       memcpy(&state_mat[config.max_order * config.n_modes], modes_out, config.n_modes * sizeof(float));
 
-      daoShmImagePart2ShmFinalize(dm_shm);
+      telemetry_shm->md[0].cnt2 = dm_shm->md[0].cnt2;
+      telemetry_ts_shm->md[0].cnt2 = dm_shm->md[0].cnt2;
+      memcpy(&telemetry_shm->array.F[0],&state_mat[0],config.n_modes * sizeof(float));
+      memcpy(&telemetry_shm->array.F[config.n_modes],modes_out,config.n_modes * sizeof(float));
+      telemetry_ts_shm->array.D[0] = modes_in_ts;
+      telemetry_ts_shm->array.D[1] = modes_out_ts;
+      daoShmImagePart2ShmFinalize(telemetry_shm);
+      daoShmImagePart2ShmFinalize(telemetry_ts_shm);
+
+      #if TIME_VERBOSE
+        computation_time += get_time_seconds() - start_compute;
+        // ---- Periodic logging
+        if (get_time_seconds() - time_at_last_print > PRINT_RATE) {
+          // ---- Compute mean loop time ----
+          double sum = 0.;
+          for (int k = 0; k < counter; k++) {
+              sum += loop_time_array[k];
+          }
+          double loop_time_mean = sum / counter;
+
+          // ---- Compute max ----
+          double max_val = loop_time_array[0];
+          for (int k = 0; k < counter; k++) {
+              if (loop_time_array[k] > max_val) {
+                  max_val = loop_time_array[k];
+              }
+          }
+
+          // ---- Count frame misses (loop_time > 2*mean) ----
+          int frame_missed = 0;
+          for (int k = 0; k < counter; k++) {
+              if (loop_time_array[k] > 2.0 * loop_time_mean) {
+                  frame_missed++;
+              }
+          }
+
+          // ---- Print results ----
+          printf("Mean Loop rate = %.2f Hz\n", 1.0 / loop_time_mean);
+          printf("Mean Loop time = %.2f ms\n", loop_time_mean * 1e3);
+          printf("Mean WFS time = %.2f ms\n", (wfs_time / counter) * 1e3);
+          printf("Mean Computation time = %.2f ms\n", (computation_time / counter) * 1e3);
+          printf("Max loop time = %.2f ms\n", max_val * 1e3);
+          printf("Frames missed = %d\n\n", frame_missed);
+          // Reset counters
+          computation_time  = wfs_time = 0;
+          counter = -1;
+          time_at_last_print = get_time_seconds();
+        }
+        counter++;
+      #endif
     }
+    else printf("Not receiving modes ! \n");
+    
   }
 
   free(modes_out);

@@ -6,12 +6,14 @@
 #include <stdbool.h>
 #include <sched.h>
 #include <math.h>
+#include <cuda_runtime.h>
+#include <cublas_v2.h>
 #include "dao.h"
 #include "toml.h"
 #include "utils.h"
 
 #define TIME_VERBOSE 1
-#define PRINT_RATE 5
+#define PRINT_RATE 1
 #define MAX_FS 1000
 
 // ---------- Structures ----------
@@ -38,7 +40,48 @@ static void endme(){
 }
 
 // ---------- Main ----------
+// Function to check CUDA errors
+#define CHECK_CUDA(call) do {                                 \
+    cudaError_t err = call;                                   \
+    if (err != cudaSuccess) {                                 \
+        fprintf(stderr, "CUDA error at %s:%d: %s\n",          \
+                __FILE__, __LINE__, cudaGetErrorString(err)); \
+        exit(EXIT_FAILURE);                                   \
+    }                                                         \
+} while (0)
 
+
+// Function to check cuBLAS errors
+#define CHECK_CUBLAS(call) do {                               \
+    cublasStatus_t stat = call;                               \
+    if (stat != CUBLAS_STATUS_SUCCESS) {                      \
+        fprintf(stderr, "cuBLAS error at %s:%d\n",            \
+                __FILE__, __LINE__);                          \
+        exit(EXIT_FAILURE);                                   \
+    }                                                         \
+} while (0)
+
+void compute_modes_with_cublas(cublasHandle_t handle,
+                               const float* d_S2M,
+                               const float* d_slopes,
+                               float* d_modes,
+                               int n_modes, int n_slopes) {
+    const float alpha = 1.0f;
+    const float beta  = 0.0f;
+
+    // y = A * x
+    // A is n_modes x n_slopes in row-major
+    // Tell cuBLAS to treat A as transposed
+    CHECK_CUBLAS(cublasSgemv(handle,
+                             CUBLAS_OP_T,      // transpose
+                             n_slopes,         // rows in column-major view
+                             n_modes,          // cols in column-major view
+                             &alpha,
+                             d_S2M, n_slopes,  // lda = n_slopes
+                             d_slopes, 1,      // vector x
+                             &beta,
+                             d_modes, 1));     // result y
+}
 int load_shm_path() {
     char errbuf[200];
     toml_table_t *root = load_toml("../config/shm_path.toml", errbuf, sizeof(errbuf));
@@ -102,10 +145,24 @@ int real_time_loop(){
   uint32_t n_pix = pixels_shm->md[0].size[0] ;
   uint32_t n_slopes = S2M_shm->md[0].size[1];
   uint32_t n_modes = S2M_shm->md[0].size[0];
-  float* modes  = calloc(n_modes, sizeof(float));
   float* slopes = malloc(n_slopes * sizeof(float));
   float* masked_image = malloc(n_pix * n_pix * sizeof(float));
   float norm_flux = 0.0f;
+
+  
+  // Device pointers
+  float *d_S2M, *d_slopes, *d_modes;
+  CHECK_CUDA(cudaMalloc((void**)&d_S2M, n_modes * n_slopes * sizeof(float)));
+  CHECK_CUDA(cudaMalloc((void**)&d_slopes, n_slopes * sizeof(float)));
+  CHECK_CUDA(cudaMalloc((void**)&d_modes, n_modes * sizeof(float)));
+
+  // Copy data to device
+  CHECK_CUDA(cudaMemcpy(d_S2M, S2M_shm->array.F, n_modes * n_slopes * sizeof(float), cudaMemcpyHostToDevice));
+
+
+  // cuBLAS handle
+  cublasHandle_t handle;
+  CHECK_CUBLAS(cublasCreate(&handle));
 
   #if TIME_VERBOSE
     double* loop_time_array = calloc((int)(PRINT_RATE*MAX_FS), sizeof(double));
@@ -116,7 +173,6 @@ int real_time_loop(){
     double start_wfs, start_compute, now, dt;
 
   #endif
-
   while(!end){
     clock_gettime(CLOCK_REALTIME, &timeout);
     timeout.tv_sec += 1; // 1 second timeout
@@ -161,15 +217,21 @@ int real_time_loop(){
           }
         }
       }
+      // // start_compute = get_time_seconds();
+      // // Matrix-vector multiply: computed_modes = RM_S2KL * slopes
+      // for (uint32_t i = 0; i < n_modes; i++) {
+      //   modes_shm->array.F[i] = 0.0f;
+      //   for (uint32_t j = 0; j < n_slopes; j++) {
+      //     modes_shm->array.F[i] += S2M_shm->array.F[i * n_slopes + j] * slopes[j];
+      //   }
+      // }
+      // Compute
+      CHECK_CUDA(cudaMemcpy(d_slopes, slopes, n_slopes * sizeof(float), cudaMemcpyHostToDevice));
+      compute_modes_with_cublas(handle, d_S2M, d_slopes, d_modes, n_modes, n_slopes);
 
-      // start_compute = get_time_seconds();
-      // Matrix-vector multiply: computed_modes = RM_S2KL * slopes
-      for (uint32_t i = 0; i < n_modes; i++) {
-        modes_shm->array.F[i] = 0.0f;
-        for (uint32_t j = 0; j < n_slopes; j++) {
-          modes_shm->array.F[i] += S2M_shm->array.F[i * n_slopes + j] * slopes[j];
-        }
-      }
+      // Copy result back
+      CHECK_CUDA(cudaMemcpy(modes_shm->array.F, d_modes, n_modes * sizeof(float), cudaMemcpyDeviceToHost));
+
       daoShmImagePart2ShmFinalize(modes_shm);
       #if TIME_VERBOSE
         computation_time += get_time_seconds() - start_compute;
@@ -219,13 +281,16 @@ int real_time_loop(){
   // Cleanup
   free(slopes);
   free(masked_image);
-  free(modes);
   free(pixels_shm);
   free(modes_shm);
   free(mask_shm);
   free(bias_image_shm);
   free(ref_img_norm_shm);
   free(S2M_shm);
+  cublasDestroy(handle);
+  cudaFree(d_S2M);
+  cudaFree(d_slopes);
+  cudaFree(d_modes);
   return 0;
 }
 

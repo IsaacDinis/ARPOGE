@@ -48,7 +48,6 @@ f_opti = '/tmp/f_opti.shm'
 
 [KL_mat]
 M2V = '/tmp/m2c.im.shm'
-M2S = '/tmp/KL2S.im.shm'
 S2M = '/tmp/S2M.shm'
 V2M = '/tmp/V2M.shm'
 

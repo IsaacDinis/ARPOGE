@@ -73,3 +73,52 @@ pix2modes = bld.program(
 	cflags = my_cflags + ['-Wall', '-Wextra', '-pipe', '-fdiagnostics-color=auto'],	
     install_path =bin_dir
 )
+
+# pix2modes_cuda = bld.program(
+# 	source = 'pix2modes_cuda.c',
+# 	target = 'pix2modes_cuda',
+# 	includes = ['../include '+os.getenv('DAOROOT')+'/include/']+bld.env.INCLUDES_CUDA,
+# 	linkflags = my_link_flags + ['-L' + p for p in bld.env.LIBPATH_CUDA],
+# 	ldflags = ['-ldao' , '-lpthread', '-lm', '-lcfitsio','-lcublas', '-lcudart'] + my_ld_flags,
+# 	use = ['utils','toml'],
+# 	cflags = my_cflags + ['-Wall', '-Wextra', '-pipe', '-fdiagnostics-color=auto'],	
+#     install_path =bin_dir
+# )
+
+
+# pix2modes_cuda = bld.program(
+# 	source = 'pix2modes_cuda.c',
+# 	target = 'pix2modes_cuda',
+# 	includes = ['../include '+os.getenv('DAOROOT')+'/include/']+bld.env.INCLUDES_CUDA,
+# 	linkflags = my_link_flags + ['-L' + p for p in bld.env.LIBPATH_CUDA],
+# 	ldflags = ['-ldao' , '-lpthread', '-lm', '-lcfitsio','-lcublas', '-lcudart'] + my_ld_flags,
+# 	use = ['utils','toml'],
+# 	cflags = my_cflags + ['-Wall', '-Wextra', '-pipe', '-fdiagnostics-color=auto'],	
+#     install_path =bin_dir
+# )
+
+# pix2modes_cuda = bld.program(
+# 	source = 'pix2modes_cuda.c',
+# 	target = 'pix2modes_cuda',
+# 	includes = '../include '+os.getenv('DAOROOT')+'/include/',
+# 	linkflags = my_link_flags,
+# 	ldflags = ['-ldao' , '-lpthread', '-lm', '-lcfitsio'] + my_ld_flags,
+# 	use = ['utils','toml'],
+# 	cflags = my_cflags + ['-Wall', '-Wextra', '-pipe', '-fdiagnostics-color=auto'],	
+#     install_path =bin_dir
+# )
+
+
+pix2modes_cuda = bld.program(
+	source = 'pix2modes_cuda.c',
+	target = 'pix2modes_cuda',
+	includes = [
+    '../include',
+    os.getenv('DAOROOT') + '/include'
+] + bld.env.INCLUDES_CUDA,
+	linkflags = my_link_flags + ['-L' + p for p in bld.env.LIBPATH_CUDA],
+	ldflags = ['-ldao' , '-lpthread', '-lm', '-lcfitsio','-lcublas', '-lcudart'] + my_ld_flags,
+	use = ['utils','toml'],
+	cflags = my_cflags + ['-Wall', '-Wextra', '-pipe', '-fdiagnostics-color=auto'],	
+    install_path =bin_dir
+)

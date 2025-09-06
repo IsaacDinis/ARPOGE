@@ -3,6 +3,7 @@ build/*
 results/*
 bin/*
 lib/*
+record/*
 *.fits
 !.gitkeep
 
