@@ -3,7 +3,7 @@ n_modes = 195
 n_voltages = 241
 n_pixels = 240
 fs = 500 #[Hz]
-delay = 2 
+latency = 0.25e-3 
 n_act = 241
 
 [visualizer]
@@ -36,10 +36,8 @@ amp = 0.5
 max_voltage = 1
 
 [sem_nb]
-optimizer = 4
-calib = 5
-slopes2modes = 5
 hrtc = 6
+pix2modes = 5
 pol = 7
 fft = 8
 visualizer = 9

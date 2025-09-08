@@ -68,7 +68,7 @@ int load_config() {
     toml_table_t *common    = toml_table_in(root, "common");
     toml_table_t *sem_nb    = toml_table_in(root, "sem_nb");
     if (common) toml_rtoi(toml_raw_in(common, "n_pixels"),  &config.n_pixels);
-    if (sem_nb)    toml_rtoi(toml_raw_in(sem_nb, "hrtc"),          &config.sem_nb);
+    if (sem_nb)    toml_rtoi(toml_raw_in(sem_nb, "pix2modes"),          &config.sem_nb);
 
     toml_free(root);
     return 0;

@@ -22,6 +22,10 @@ n_modes = config['common']['n_modes']
 gain = config['integrator']['gain']
 dm_shm = dao.shm(shm_path['HW']['dm'])
 
+latency = np.array([[config['common']['latency']]],dtype = np.float32)
+fs = np.array([[config['common']['fs']]],dtype = np.float32)
+delay = latency*fs+1
+
 # create shm
 # time domain data
 modes_in_buf = np.zeros((buf_size,n_modes),np.float32)
@@ -39,12 +43,12 @@ modes_in_fft = np.ones((int(n_fft_display/2),n_modes),np.float32)
 modes_out_fft = np.ones((int(n_fft_display/2),n_modes),np.float32)
 pol_fft = np.ones((int(n_fft_display/2),n_modes),np.float32)
 f = np.ones((int(n_fft_display/2),1),np.float32)
-t = np.zeros((buf_size,1),dtype = np.float32)
+t = np.arange(0,buf_size,dtype = np.float32)/fs
+t = t[:,np.newaxis]
 
 # loop variables
-delay = np.array([[config['common']['delay']]],dtype = np.float32)
-fs = np.array([[config['common']['fs']]],dtype = np.float32)
-latency = np.zeros((1,1),dtype = np.float32)
+
+
 
 
 M2V = dao.shm(shm_path['KL_mat']['M2V']).get_data(check=False)
@@ -78,17 +82,17 @@ S_dd = np.ones((n_fft_max,n_modes),dtype=np.float32)
 S_omgi = np.ones((n_fft_max,n_modes),dtype=np.float32)
 S_int = np.ones((n_fft_max,1),dtype=np.float32)
 f_opti = np.ones((n_fft_max,1),dtype=np.float32)
-f_opti[:n_fft_optimizer[0][0]]= np.linspace(0.1,fs[0][0]/2,n_fft_optimizer[0][0])[:,np.newaxis]
+f_opti[:n_fft_optimizer[0][0]]= np.linspace(0.1,0.999*fs[0][0]/2,n_fft_optimizer[0][0])[:,np.newaxis]
 
 n_act = dm_shm.get_data().shape[0]
 flat = np.zeros((n_act,1),dtype = np.float32)
 
 #Load calibratition matrices
-calib_data_dir = os.path.join(this_script_dir, "../calib_data/")
-mask = fits.getdata(os.path.join(calib_data_dir, "mask.fits")).astype(np.uint16)
-bias_image = fits.getdata(os.path.join(calib_data_dir, "bias_image.fits")).astype(np.uint16)
-ref_img_norm = fits.getdata(os.path.join(calib_data_dir, "reference_image_normalized.fits")).astype(np.float32)
-S2M = fits.getdata(os.path.join(calib_data_dir, "RM_S2KL.fits")).astype(np.float32)
+data_dir = os.path.join(this_script_dir, "../data/")
+mask = fits.getdata(os.path.join(data_dir, "mask.fits")).astype(np.uint16)
+bias_image = fits.getdata(os.path.join(data_dir, "bias_image.fits")).astype(np.uint16)
+ref_img_norm = fits.getdata(os.path.join(data_dir, "reference_image_normalized.fits")).astype(np.float32)
+S2M = fits.getdata(os.path.join(data_dir, "RM_S2KL.fits")).astype(np.float32)
 
 
 

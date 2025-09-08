@@ -67,8 +67,8 @@ int_gain = dao.shm(shm_path['K']['K_mat_int']).get_data()[0,0]
 # norm_flux_pyr_img_shm = dao.shm(shm_path_flux['norm_flux_pyr_img'])
 # strehl_ratio_shm = dao.shm(shm_path_flux['strehl_ratio'])
 
-# record_its = int(record_time*fs) #TODO
-record_its = 100 
+record_its = int(record_time*fs)
+
 results_file = TomlFileUpdater(os.path.join(full_path, "results.toml"))
 results_file.add('n_fft',n_fft)
 

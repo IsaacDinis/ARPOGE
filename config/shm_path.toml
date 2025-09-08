@@ -11,7 +11,6 @@ pol_fft = '/tmp/pol_fft.shm'
 f = '/tmp/f.shm'
 
 [K]
-#state_mat = '/tmp/state_mat.shm'
 K_mat_int = '/tmp/K_mat_int.shm'
 K_mat_dd = '/tmp/K_mat_dd.shm'
 K_mat_omgi = '/tmp/K_mat_omgi.shm'
@@ -34,6 +33,7 @@ n_fft = '/tmp/n_fft.shm'
 wait_time = '/tmp/wait_time.shm'
 record_time = '/tmp/record_time.shm'
 pyramid_select = '/tmp/pyramid_select.shm'
+
 
 [event_flag]
 reset_flag = '/tmp/reset_flag.shm'

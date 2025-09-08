@@ -16,11 +16,11 @@ with open(os.path.join(this_script_dir,'../config/shm_path.toml'), 'r') as f:
 modes_shm = dao.shm(shm_path['HW']['modes_in_custom'])
 pixels_shm = dao.shm(shm_path['HW']['pixels_3sided'])
 
-calib_data_dir = os.path.join(this_script_dir, "../calib_data/")
-bias_image = fits.getdata(os.path.join(calib_data_dir, "bias_image.fits"))
-mask = fits.getdata(os.path.join(calib_data_dir, "mask.fits"))
-reference_image_normalized = fits.getdata(os.path.join(calib_data_dir, "reference_image_normalized.fits"))
-IM_KL2S = fits.getdata(os.path.join(calib_data_dir, "IM_KL2S.fits"))
+data_dir = os.path.join(this_script_dir, "../data/")
+bias_image = fits.getdata(os.path.join(data_dir, "bias_image.fits"))
+mask = fits.getdata(os.path.join(data_dir, "mask.fits"))
+reference_image_normalized = fits.getdata(os.path.join(data_dir, "reference_image_normalized.fits"))
+IM_KL2S = fits.getdata(os.path.join(data_dir, "IM_KL2S.fits"))
 
 def compute_pyr_slopes(normalized_pyr_img, normalized_ref_img):
     slopes_image = normalized_pyr_img - normalized_ref_img
@@ -62,7 +62,7 @@ valid_pixels_indices = np.where(mask > 0)
 RM_S2KL = np.linalg.pinv(IM_KL2S, rcond=0.10)
 
 # hdu = fits.PrimaryHDU(RM_S2KL.astype(np.float32).T)
-# hdu.writeto(os.path.join(calib_data_dir, "RM_S2KL.fits"),overwrite = True)
+# hdu.writeto(os.path.join(data_dir, "RM_S2KL.fits"),overwrite = True)
 
 print(f"Shape of the reconstruction matrix: {RM_S2KL.shape}")
 RM_S2KL_cp = cp.asarray(RM_S2KL)

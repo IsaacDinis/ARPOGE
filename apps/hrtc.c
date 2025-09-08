@@ -1,145 +1,408 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h> 
-#include <sched.h>
-#include <math.h>
-#include <time.h>
-#include <sys/stat.h>
-#include <libgen.h>
+#include <string.h>
 #include <errno.h>
+#include <signal.h>
+#include <stdbool.h>
+#include <sched.h>
+#include <time.h>
 #include "dao.h"
-#include "fitsio.h"
+#include "toml.h"
+#include "utils.h"
 
-#define VERBOSE 0
+#define TIME_VERBOSE 1
+#define PRINT_RATE 5
+#define MAX_FS 1000
+// ---------- Structures ----------
 
-#define SHM_NAME_SIZE 32
-#define N_MODES 195
-#define N_ACT 241
-#define ORDER 20
-#define PRINT_RATE 1.0
-#define N_ITER 5000
-#define BOOTSTRAP_N_ITER 10
-#define MAX_PATH 1024
+struct {
+  char *modes_in_4sided;
+  char *modes_in_custom;
+  char *modes_in_3sided;
+  char *pyramid_select;
+  char *dm;
+  char *M2V;
+  char *V2M;
+  char *reset_flag;
+  char *controller_select;
+  char *closed_loop_state_flag;
+  char *K_mat_int;
+  char *K_mat_dd;
+  char *K_mat_omgi;
+  char *K_mat_flag;
+  char *pyramid_flag;
+  char *n_modes_controlled;
+  char *telemetry;
+  char *telemetry_ts;
 
+} shm_path;
 
-char in_shm_name[SHM_NAME_SIZE] = "/tmp/papyrus_modes.im.shm";
-// char in_shm_name[SHM_NAME_SIZE] = "/tmp/modes.shm";
+struct {
+  int64_t sem_nb;
+  int64_t n_modes;
+  int64_t n_act;
+  int64_t max_order;
+  double  max_voltage;
+} config;
 
-char out_shm_name[SHM_NAME_SIZE] = "/tmp/dmCmd03.im.shm";
-char M2V_shm_name[SHM_NAME_SIZE] = "/tmp/m2c.im.shm";
-
-const int sem_nb = 7;
-
-double get_time_seconds() {
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    return (double)ts.tv_sec + (double)ts.tv_nsec / 1e9;  // casts are important
+// ---------- Helpers ----------
+static int end = 0;               // termination flag
+// termination function for SIGINT callback
+static void endme(){
+    end = 1;
 }
 
+int load_shm_path() {
+  char errbuf[200];
+  toml_table_t *root = load_toml("../config/shm_path.toml", errbuf, sizeof(errbuf));
+  if (!root) return 1;
 
-// Write double array to FITS file CHAT GPT
-int write_fits_double(const char *filename, double *array, long n) { 
-    fitsfile *fptr; 
-    int status = 0; 
-    long naxes[1] = {n}; 
-    if (fits_create_file(&fptr, filename, &status)) 
-        return status; 
-    if (fits_create_img(fptr, DOUBLE_IMG, 1, naxes, &status)) 
-        return status; 
-    if (fits_write_img(fptr, TDOUBLE, 1, n, array, &status)) 
-        return status; 
-    if (fits_close_file(fptr, &status)) 
-        return status; 
-    return 0; 
+  toml_table_t *HW = toml_table_in(root, "HW");
+  toml_table_t *settings = toml_table_in(root, "settings");
+  toml_table_t *KL_mat = toml_table_in(root, "KL_mat");
+  toml_table_t *K = toml_table_in(root, "K");
+  toml_table_t *event_flag = toml_table_in(root, "event_flag");
+  toml_table_t *telemetry = toml_table_in(root, "telemetry");
+
+  if (HW) {
+    toml_rtos(toml_raw_in(HW, "modes_in_4sided"), &shm_path.modes_in_4sided);  
+    toml_rtos(toml_raw_in(HW, "modes_in_custom"), &shm_path.modes_in_custom);
+    toml_rtos(toml_raw_in(HW, "modes_in_3sided"), &shm_path.modes_in_3sided);
+    toml_rtos(toml_raw_in(HW, "dm"),              &shm_path.dm);
+  }
+  
+  if (KL_mat){
+    toml_rtos(toml_raw_in(KL_mat, "M2V"),  &shm_path.M2V);
+    toml_rtos(toml_raw_in(KL_mat, "V2M"),  &shm_path.V2M);
+  } 
+  
+  if (settings) {
+    toml_rtos(toml_raw_in(settings, "pyramid_select"),    &shm_path.pyramid_select);
+    toml_rtos(toml_raw_in(settings, "controller_select"), &shm_path.controller_select);
+    toml_rtos(toml_raw_in(settings, "closed_loop_state_flag"),  &shm_path.closed_loop_state_flag);
+    toml_rtos(toml_raw_in(settings, "n_modes_controlled"),  &shm_path.n_modes_controlled);
+  }
+
+  if (K) {
+    toml_rtos(toml_raw_in(K, "K_mat_int"),  &shm_path.K_mat_int);
+    toml_rtos(toml_raw_in(K, "K_mat_dd"),   &shm_path.K_mat_dd);
+    toml_rtos(toml_raw_in(K, "K_mat_omgi"), &shm_path.K_mat_omgi);
+  }
+  if (event_flag) {
+    toml_rtos(toml_raw_in(event_flag, "reset_flag"),   &shm_path.reset_flag);
+    toml_rtos(toml_raw_in(event_flag, "K_mat_flag"),   &shm_path.K_mat_flag);
+    toml_rtos(toml_raw_in(event_flag, "pyramid_flag"), &shm_path.pyramid_flag);
+  }
+  if (telemetry) {
+    toml_rtos(toml_raw_in(telemetry, "telemetry"),   &shm_path.telemetry);
+    toml_rtos(toml_raw_in(telemetry, "telemetry_ts"),   &shm_path.telemetry_ts);
+  }
+
+  toml_free(root);
+  return 0;
 }
 
-// ---- mkdir -p equivalent ---- CHAT GPT
-int mkdir_p(const char *path) {
-    char tmp[MAX_PATH];
-    strncpy(tmp, path, sizeof(tmp));
-    tmp[sizeof(tmp) - 1] = '\0';
+int load_config() {
+  char errbuf[200];
+  toml_table_t *root = load_toml("../config/config.toml", errbuf, sizeof(errbuf));
+  if (!root) return 1;
 
-    for (char *p = tmp + 1; *p; p++) {
-        if (*p == '/') {
-            *p = '\0';
-            if (mkdir(tmp, 0755) && errno != EEXIST) return -1;
-            *p = '/';
+  toml_table_t *common    = toml_table_in(root, "common");
+  toml_table_t *hrtc      = toml_table_in(root, "hrtc");
+  toml_table_t *sem_nb    = toml_table_in(root, "sem_nb");
+  toml_table_t *optimizer = toml_table_in(root, "optimizer"); 
+
+  if (common){    
+    toml_rtoi(toml_raw_in(common, "n_modes"), &config.n_modes);
+    toml_rtoi(toml_raw_in(common, "n_act"),   &config.n_act);
+  }
+
+  if (hrtc)      toml_rtod(toml_raw_in(hrtc, "max_voltage"),     &config.max_voltage);
+  if (sem_nb)    toml_rtoi(toml_raw_in(sem_nb, "hrtc"),          &config.sem_nb);
+  if (optimizer) toml_rtoi(toml_raw_in(optimizer, "max_order"),  &config.max_order);
+
+  toml_free(root);
+  return 0;
+}
+
+// ---------- Free helpers ----------
+
+void free_shm_path() {
+  free(shm_path.modes_in_4sided);
+  free(shm_path.modes_in_custom);
+  free(shm_path.modes_in_3sided);
+  free(shm_path.dm);
+  free(shm_path.pyramid_select);
+  free(shm_path.reset_flag);
+  free(shm_path.controller_select);
+  free(shm_path.closed_loop_state_flag);
+  free(shm_path.M2V);
+  free(shm_path.V2M);
+  free(shm_path.K_mat_int);
+  free(shm_path.K_mat_dd);
+  free(shm_path.K_mat_omgi);
+  free(shm_path.K_mat_flag);
+  free(shm_path.pyramid_flag);
+  free(shm_path.telemetry);
+  free(shm_path.telemetry_ts);
+}
+
+// int load_K_mat(float* K_mat){
+int load_K_mat(IMAGE *K_mat_shm, uint32_t controller_select){
+  
+  enum{INTEGRATOR,OMGI,DD};
+  switch (controller_select) {
+    case INTEGRATOR:
+      daoShmShm2Img(shm_path.K_mat_int, K_mat_shm);
+      break;
+    case OMGI:
+      daoShmShm2Img(shm_path.K_mat_omgi, K_mat_shm);
+      break;
+    case DD:
+      daoShmShm2Img(shm_path.K_mat_dd, K_mat_shm);
+      break;
+    default:
+      printf("This controller type does not exist");
+      return 1;
+  }
+  return 0;
+}
+
+int select_pyramid(IMAGE *modes_in_shm, uint32_t pyramid_select){
+  enum{PYR_4_SIDED,PYR_3_SIDED,CUSTOM};
+
+  switch (pyramid_select) {
+    case PYR_4_SIDED:
+      daoShmShm2Img(shm_path.modes_in_4sided, modes_in_shm);
+      break;
+    case PYR_3_SIDED:
+      daoShmShm2Img(shm_path.modes_in_3sided, modes_in_shm);
+      break;
+    case CUSTOM:
+      daoShmShm2Img(shm_path.modes_in_custom, modes_in_shm);
+      break;
+    default:
+      printf("This pyramid type does not exist");
+      return 1;
+  }
+  return 0;
+}
+
+int check_flag(IMAGE *flag_shm){
+  if(flag_shm->array.UI32[0]){
+    flag_shm->array.UI32[0] = 0;
+    return 1;
+  } 
+  return 0;
+}
+
+void reset_state_mat(float* state_mat){
+  size_t len = (2 * config.max_order + 1) * config.n_modes;
+  memset(state_mat, 0, len * sizeof(float));
+}
+
+static inline float clamp(float x, float max, bool *saturated) {
+  if (x < -max) {
+    *saturated = true;
+    return -max;
+  } 
+  else if (x > max) {
+    *saturated = true;
+    return max;
+  }
+  return x;
+}
+
+int real_time_loop(){
+
+  signal(SIGINT, endme);
+
+  float* state_mat = calloc((2 * config.max_order + 1) * config.n_modes, sizeof(float));
+  float* modes_out = calloc(config.n_modes, sizeof(float));
+  bool saturated = 0;
+  double time_at_last_saturated_print = get_time_seconds();
+  struct timespec timeout;
+  IMAGE *modes_in_shm = (IMAGE*) malloc(sizeof(IMAGE));
+  IMAGE *dm_shm = (IMAGE*) malloc(sizeof(IMAGE));
+  IMAGE *M2V_shm = (IMAGE*) malloc(sizeof(IMAGE));
+  IMAGE *V2M_shm = (IMAGE*) malloc(sizeof(IMAGE));
+  IMAGE *K_mat_flag_shm = (IMAGE*) malloc(sizeof(IMAGE));
+  IMAGE *reset_flag_shm = (IMAGE*) malloc(sizeof(IMAGE));
+  IMAGE *pyramid_flag_shm = (IMAGE*) malloc(sizeof(IMAGE));
+  IMAGE *closed_loop_state_flag_shm = (IMAGE*) malloc(sizeof(IMAGE));
+  IMAGE *K_mat_shm = (IMAGE*) malloc(sizeof(IMAGE));
+  IMAGE *controller_select_shm = (IMAGE*) malloc(sizeof(IMAGE));
+  IMAGE *pyramid_select_shm = (IMAGE*) malloc(sizeof(IMAGE));
+  IMAGE *n_modes_controlled_shm = (IMAGE*) malloc(sizeof(IMAGE));
+  IMAGE *telemetry_shm = (IMAGE*) malloc(sizeof(IMAGE));
+  IMAGE *telemetry_ts_shm = (IMAGE*) malloc(sizeof(IMAGE));
+  daoShmShm2Img(shm_path.pyramid_select, pyramid_select_shm);
+  daoShmShm2Img(shm_path.controller_select, controller_select_shm);
+  daoShmShm2Img(shm_path.dm, dm_shm);
+  daoShmShm2Img(shm_path.M2V, M2V_shm);
+  daoShmShm2Img(shm_path.V2M, V2M_shm);
+  daoShmShm2Img(shm_path.K_mat_flag, K_mat_flag_shm);
+  daoShmShm2Img(shm_path.reset_flag, reset_flag_shm);
+  daoShmShm2Img(shm_path.pyramid_flag, pyramid_flag_shm);
+  daoShmShm2Img(shm_path.closed_loop_state_flag, closed_loop_state_flag_shm);
+  daoShmShm2Img(shm_path.n_modes_controlled, n_modes_controlled_shm);
+  daoShmShm2Img(shm_path.telemetry, telemetry_shm);
+  daoShmShm2Img(shm_path.telemetry_ts, telemetry_ts_shm);
+
+  load_K_mat(K_mat_shm,controller_select_shm->array.UI32[0]);
+  select_pyramid(modes_in_shm, pyramid_select_shm->array.UI32[0]);
+  double modes_out_ts;
+  double modes_in_ts;
+  #if TIME_VERBOSE
+    double* loop_time_array = calloc((int)(PRINT_RATE*MAX_FS), sizeof(double));
+    double last_loop_time = get_time_seconds();
+    double computation_time = 0, wfs_time = 0;
+    int counter = 0;
+    double time_at_last_print = get_time_seconds();
+    double start_wfs, now, start_compute, dt;
+
+  #endif
+
+  // printf("n_slopes = %d\n\n", modes_in_shm->md[0].size[0]);
+  while(!end){
+
+    if(check_flag(K_mat_flag_shm))load_K_mat(K_mat_shm,controller_select_shm->array.UI32[0]);
+    if(check_flag(pyramid_flag_shm))select_pyramid(modes_in_shm, pyramid_select_shm->array.UI32[0]);
+    if(check_flag(reset_flag_shm)) reset_state_mat(state_mat);
+    saturated = 0;
+    clock_gettime(CLOCK_REALTIME, &timeout);
+    timeout.tv_sec += 1; // 1 second timeout
+    #if TIME_VERBOSE
+      now = get_time_seconds();
+      dt = now - last_loop_time;
+      loop_time_array[counter] = dt;
+      last_loop_time = now;
+      start_wfs = get_time_seconds();
+    #endif
+    if (daoShmWaitForSemaphoreTimeout(modes_in_shm, config.sem_nb, &timeout) != -1){
+      #if TIME_VERBOSE
+        wfs_time += get_time_seconds() - start_wfs;
+        start_compute = get_time_seconds();
+      #endif
+
+      modes_in_ts = (double)modes_in_shm[0].md[0].atime.ts.tv_sec + (double)modes_in_shm[0].md[0].atime.ts.tv_nsec / 1e9;
+      dm_shm->md[0].cnt2 = modes_in_shm->md[0].cnt2;
+
+      memmove(&state_mat[config.n_modes], state_mat, config.n_modes * (2 * config.max_order) * sizeof(float));
+      memcpy(&state_mat[0], modes_in_shm->array.F, config.n_modes * sizeof(float)); 
+      
+      for (uint32_t i = 0; i < (uint32_t) config.n_modes; i++) {
+        modes_out[i] = 0;
+        // if(closed_loop_state_flag_shm->array.UI32[0]&&i<n_modes_controlled_shm->array.UI32[0]){
+        if(closed_loop_state_flag_shm->array.UI32[0]&&i<150){ // TODO
+          for (int j = 0; j < 2 * config.max_order + 1; j++) {
+            modes_out[i] += state_mat[j * config.n_modes + i] * K_mat_shm->array.F[j * config.n_modes + i];
+          }
         }
+      }
+      for (int i = 0; i < config.n_act; i++) {
+          dm_shm->array.F[i] = 0;
+          for (int j = 0; j < config.n_modes; j++) {
+              dm_shm->array.F[i] -= M2V_shm->array.F[i * config.n_modes + j] * modes_out[j];
+          }
+          dm_shm->array.F[i] = clamp(dm_shm->array.F[i], config.max_voltage, &saturated);
+      }
+      daoShmImagePart2ShmFinalize(dm_shm);
+      modes_out_ts = get_time_seconds();
+
+      if (saturated) {
+        for (int j = 0; j < config.n_modes; j++) {
+          modes_out[j] = 0.0f;
+          for (int i = 0; i < config.n_act; i++) {
+            modes_out[j] -= V2M_shm->array.F[j * config.n_act + i] * dm_shm->array.F[i];
+          }
+        }
+        if (get_time_seconds() - time_at_last_saturated_print > PRINT_RATE){
+          time_at_last_saturated_print = get_time_seconds();
+          printf("Saturation detected \n");
+        }
+
+      }
+      #if TIME_VERBOSE
+        computation_time += get_time_seconds() - start_compute;
+      #endif
+      memcpy(&state_mat[config.max_order * config.n_modes], modes_out, config.n_modes * sizeof(float));
+
+
+      telemetry_shm->md[0].cnt2 = dm_shm->md[0].cnt2;
+      telemetry_ts_shm->md[0].cnt2 = dm_shm->md[0].cnt2;
+      memcpy(&telemetry_shm->array.F[0],&state_mat[0],config.n_modes * sizeof(float));
+      memcpy(&telemetry_shm->array.F[config.n_modes],modes_out,config.n_modes * sizeof(float));
+      telemetry_ts_shm->array.D[0] = modes_in_ts;
+      telemetry_ts_shm->array.D[1] = modes_out_ts;
+      daoShmImagePart2ShmFinalize(telemetry_shm);
+      daoShmImagePart2ShmFinalize(telemetry_ts_shm);
+
+      #if TIME_VERBOSE
+        // ---- Periodic logging
+        if (get_time_seconds() - time_at_last_print > PRINT_RATE) {
+          // ---- Compute mean loop time ----
+          double sum = 0.;
+          for (int k = 0; k < counter; k++) {
+              sum += loop_time_array[k];
+          }
+          double loop_time_mean = sum / counter;
+
+          // ---- Compute max ----
+          double max_val = loop_time_array[0];
+          for (int k = 0; k < counter; k++) {
+              if (loop_time_array[k] > max_val) {
+                  max_val = loop_time_array[k];
+              }
+          }
+
+          // ---- Count frame misses (loop_time > 2*mean) ----
+          int frame_missed = 0;
+          for (int k = 0; k < counter; k++) {
+              if (loop_time_array[k] > 2.0 * loop_time_mean) {
+                  frame_missed++;
+              }
+          }
+
+          // ---- Print results ----
+          printf("Mean Loop rate = %.2f Hz\n", 1.0 / loop_time_mean);
+          printf("Mean Loop time = %.2f ms\n", loop_time_mean * 1e3);
+          printf("Mean WFS time = %.2f ms\n", (wfs_time / counter) * 1e3);
+          printf("Mean Computation time = %.2f ms\n", (computation_time / counter) * 1e3);
+          printf("Max loop time = %.2f ms\n", max_val * 1e3);
+          printf("Frames missed = %d\n\n", frame_missed);
+          // Reset counters
+          computation_time  = wfs_time = 0;
+          counter = -1;
+          time_at_last_print = get_time_seconds();
+        }
+        counter++;
+      #endif
     }
-    if (mkdir(tmp, 0755) && errno != EEXIST) return -1;
-    return 0;
+    else printf("Not receiving modes ! \n");
+    
+  }
+
+  free(modes_out);
+  free(state_mat);
+  free(modes_in_shm);
+  free(dm_shm);
+  free(M2V_shm);
+  free(V2M_shm);
+  free(K_mat_flag_shm);
+  free(reset_flag_shm);
+  free(pyramid_flag_shm);
+  free(closed_loop_state_flag_shm);
+  free(K_mat_shm);
+  free(controller_select_shm);
+  free(pyramid_select_shm);
+  free(n_modes_controlled_shm);
+  return 0;
 }
 
-// ---- Save array to FITS ---- CHAT GPT
-int save_array_to_fits(const char *array_name, double *array, long n_iter, long bootstrap_n_iter) {
-    // 1) get executable directory
-    char exe_path[PATH_MAX];
-    ssize_t len = readlink("/proc/self/exe", exe_path, sizeof(exe_path) - 1);
-    if (len == -1) {
-        perror("readlink");
-        return -1;
-    }
-    exe_path[len] = '\0';
-    char *exe_dir = dirname(exe_path);   // e.g. dummy/build/apps
+// ---------- Main ----------
 
-    // 2) go two levels up: dummy/build/apps → dummy/build → dummy
-    char parent_dir[MAX_PATH];
-    strncpy(parent_dir, exe_dir, sizeof(parent_dir) - 1);
-    parent_dir[sizeof(parent_dir) - 1] = '\0';
-    for (int i = 0; i < 2; i++) {
-        char *slash = strrchr(parent_dir, '/');
-        if (slash) *slash = '\0';
-    }
-
-    // 3) build results_dir = parent_dir + "/results"
-    char results_dir[MAX_PATH];
-    strncpy(results_dir, parent_dir, sizeof(results_dir) - 1);
-    results_dir[sizeof(results_dir) - 1] = '\0';
-    strncat(results_dir, "/results", sizeof(results_dir) - strlen(results_dir) - 1);
-
-    // 4) timestamped folder
-    char folder_name[64];
-    time_t t = time(NULL);
-    struct tm tm_info;
-    localtime_r(&t, &tm_info);
-    strftime(folder_name, sizeof(folder_name), "%Y-%m-%d_%H-%M-%S", &tm_info);
-    strncat(folder_name, "_c", sizeof(folder_name) - strlen(folder_name) - 1);
-
-    // 5) build full_path = results_dir + "/" + folder_name
-    char full_path[MAX_PATH];
-    strncpy(full_path, results_dir, sizeof(full_path) - 1);
-    full_path[sizeof(full_path) - 1] = '\0';
-    strncat(full_path, "/", sizeof(full_path) - strlen(full_path) - 1);
-    strncat(full_path, folder_name, sizeof(full_path) - strlen(full_path) - 1);
-
-    if (mkdir_p(full_path) != 0) {
-        perror("mkdir_p");
-        return -1;
-    }
-
-    // 6) slice array
-    long n = n_iter - bootstrap_n_iter;
-    double *array_ptr = &array[bootstrap_n_iter];
-
-    // 7) build fits_file = full_path + "/" + array_name + ".fits"
-    char fits_file[MAX_PATH];
-    strncpy(fits_file, full_path, sizeof(fits_file) - 1);
-    fits_file[sizeof(fits_file) - 1] = '\0';
-    strncat(fits_file, "/", sizeof(fits_file) - strlen(fits_file) - 1);
-    strncat(fits_file, array_name, sizeof(fits_file) - strlen(fits_file) - 1);
-    strncat(fits_file, ".fits", sizeof(fits_file) - strlen(fits_file) - 1);
-
-    if (write_fits_double(fits_file, array_ptr, n) != 0) {
-        fprintf(stderr, "Error writing %s\n", fits_file);
-        return -1;
-    }
-
-    printf("Saved %s to %s\n", array_name, full_path);
-    return 0;
-}
-
-int main() {
-
+int main(void) {
   int RT_priority = 93; //any number from 0-99
   struct sched_param schedpar;
 
@@ -147,118 +410,9 @@ int main() {
   // r = seteuid(euid_called); //This goes up to maximum privileges
   sched_setscheduler(0, SCHED_FIFO, &schedpar); //other option is SCHED_RR, might be faster
   // r = seteuid(euid_real);//Go back to normal privileges
-
-  const float gain = 0.3;
-
-  IMAGE *in_shm = (IMAGE*) malloc(sizeof(IMAGE));
-  IMAGE *out_shm = (IMAGE*) malloc(sizeof(IMAGE));
-  IMAGE *M2V_shm = (IMAGE*) malloc(sizeof(IMAGE));
-
-  float* state_mat = calloc((2 * ORDER + 1) * N_MODES, sizeof(float));
-  float* K_mat     = calloc((2 * ORDER + 1) * N_MODES, sizeof(float));
-  float* command   = calloc(N_MODES, sizeof(float));
-
-  daoShmShm2Img(M2V_shm_name, &M2V_shm[0]);
-  daoShmShm2Img(in_shm_name, &in_shm[0]);
-  daoShmShm2Img(out_shm_name, &out_shm[0]);
-
-  double* loop_time_array = calloc((int)(N_ITER), sizeof(double));
-  double* wfs_timestamp_array = calloc((int)(N_ITER), sizeof(double));
-
-  double last_loop_time = get_time_seconds();
-  double computation_time = 0, wfs_time = 0;
-
-  #if VERBOSE
-    int counter = 0;
-    double time_at_last_print = get_time_seconds();
-  #endif
-
-  for (int i = 0; i < N_MODES; i++) {
-      K_mat[i] = gain; 
-      K_mat[(ORDER + 1) * N_MODES + i] = 0.99f;
-  }
-
-  for (int iter = 0; iter < N_ITER; iter++) {
-    
-    double now = get_time_seconds();
-    double dt = now - last_loop_time;
-    loop_time_array[iter] = dt;
-    last_loop_time = now;
-
-    double start_wfs = get_time_seconds();
-    daoShmWaitForSemaphore(in_shm, sem_nb);
-    wfs_timestamp_array[iter] = (double)in_shm[0].md[0].atime.ts.tv_sec + (double)in_shm[0].md[0].atime.ts.tv_nsec / 1e9;
-
-    wfs_time += get_time_seconds() - start_wfs;
-
-    double start_compute = get_time_seconds();
-    out_shm[0].md[0].cnt2 = in_shm[0].md[0].cnt2;
-
-    memmove(&state_mat[N_MODES], state_mat, N_MODES * (2 * ORDER) * sizeof(float));
-    memcpy(&state_mat[0], in_shm[0].array.F, N_MODES * sizeof(float));  // insert new row at top
-
-    
-    for (int i = 0; i < N_MODES; i++) {
-        command[i] = 0;
-        for (int j = 0; j < 2 * ORDER + 1; j++) {
-            command[i] += state_mat[j * N_MODES + i] * K_mat[j * N_MODES + i];
-        }
-    }
-    memcpy(&state_mat[ORDER * N_MODES], command, N_MODES * sizeof(float));
-
-    for (int i = 0; i < N_ACT; i++) {
-        out_shm[0].array.F[i] = 0;
-        for (int j = 0; j < N_MODES; j++) {
-            out_shm[0].array.F[i] -= M2V_shm[0].array.F[i * N_MODES + j] * command[j];
-        }
-    }
-    daoShmImagePart2ShmFinalize(&out_shm[0]);
-    computation_time += get_time_seconds() - start_compute;
-
-    #if VERBOSE
-        // ---- Periodic logging
-        if (get_time_seconds() - time_at_last_print > PRINT_RATE) {
-                // ---- Compute mean loop time ----
-            double sum = 0.;
-            for (int k = iter - counter; k < iter; k++) {
-                sum += loop_time_array[k];
-            }
-            double loop_time_mean = sum / counter;
-
-            // ---- Compute max ----
-            double max_val = loop_time_array[iter - counter];
-            for (int k = iter - counter; k < iter; k++) {
-                if (loop_time_array[k] > max_val) {
-                    max_val = loop_time_array[k];
-                }
-            }
-
-            // ---- Count frame misses (loop_time > 2*mean) ----
-            int frame_missed = 0;
-            for (int k = iter - counter; k < iter; k++) {
-                if (loop_time_array[k] > 2.0 * loop_time_mean) {
-                    frame_missed++;
-                }
-            }
-
-            // ---- Print results ----
-            printf("Mean Loop rate = %.2f Hz\n", 1.0 / loop_time_mean);
-            printf("Mean Loop time = %.2f ms\n", loop_time_mean * 1e3);
-            printf("Mean WFS time = %.2f ms\n", (wfs_time / counter) * 1e3);
-            printf("Mean Computation time = %.2f ms\n", (computation_time / counter) * 1e3);
-            printf("Max loop time = %.2f ms\n", max_val * 1e3);
-            printf("Frames missed = %d\n\n", frame_missed);
-            // Reset counters
-            computation_time = counter = wfs_time = 0;
-            time_at_last_print = get_time_seconds();
-        }
-            counter++;
-    #endif
-  }
-
-
-    save_array_to_fits("loop_time_array", loop_time_array, N_ITER, BOOTSTRAP_N_ITER);
-    save_array_to_fits("wfs_timestamp_array", wfs_timestamp_array, N_ITER, BOOTSTRAP_N_ITER);
-
+  load_config();
+  load_shm_path();
+  real_time_loop();
+  free_shm_path();
   return 0;
 }
