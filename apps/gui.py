@@ -352,6 +352,7 @@ class MainWindow(QMainWindow):
         self.record_time_changed(self.record_time_spinbox.value())
         
         self.closed_loop_checkbox.stateChanged.connect(self.closed_loop_check)
+        self.save_slopes_checkbox.stateChanged.connect(self.save_slopes_check)
         self.reset_state_mat_button.clicked.connect(self.reset_state_mat)
 
         self.save_flat_button.clicked.connect(self.save_flat)
@@ -359,6 +360,7 @@ class MainWindow(QMainWindow):
         self.reset_flat_button.clicked.connect(self.reset_flat)
         self.save_latency_button.clicked.connect(self.save_latency)
         self.load_latency_button.clicked.connect(self.load_latency)
+        self.nico_button.clicked.connect(self.start_record_and_close_loop)
 
         self.controller_select_dial.valueChanged.connect(self.update_controller_select)
         self.update_controller_select(self.controller_select_dial.value())
@@ -382,7 +384,7 @@ class MainWindow(QMainWindow):
             shm_path = toml.load(f)
 
         self.pyr_3_shm                     = dao.shm(shm_path['HW']['pixels_3sided'])             
-        self.pyr_4_shm                     = dao.shm(shm_path['HW']['pixels_4sided'])
+        self.pyr_3_masked_shm                     = dao.shm(shm_path['HW']['pixels_masked_3sided'])
 
 
         self.modes_in_fft_shm = dao.shm(shm_path['frequency_domain_buff']['modes_in_fft'])
@@ -396,6 +398,7 @@ class MainWindow(QMainWindow):
         self.t_shm = dao.shm(shm_path['time_domain_buff']['t'])    
 
         self.closed_loop_state_flag_shm = dao.shm(shm_path['settings']['closed_loop_state_flag']) 
+        self.save_slopes_state_flag_shm = dao.shm(shm_path['settings']['save_slopes_state_flag']) 
         self.n_modes_dd_shm = dao.shm(shm_path['settings']['n_modes_dd']) 
         self.n_modes_controlled_shm = dao.shm(shm_path['settings']['n_modes_controlled'])
         self.dd_update_rate_shm = dao.shm(shm_path['settings']['dd_update_rate'])
@@ -462,7 +465,7 @@ class MainWindow(QMainWindow):
         # All image views and their corresponding placeholder names
         placeholders = {
             "pyr_3_widget": "pyr_3_view",
-            "pyr_4_widget": "pyr_4_view",
+            "pyr_3_masked_widget": "pyr_3_masked_view",
         }
 
         for placeholder_name, attr_name in placeholders.items():
@@ -471,7 +474,7 @@ class MainWindow(QMainWindow):
 
     def update_images(self):
         self.pyr_3_view.setImage(self.pyr_3_shm.get_data(check=False,semNb=self.sem_nb), autoLevels=(self.autoscale_pyr_3_checkbox.checkState()==Qt.CheckState.Checked),autoRange=False)
-        self.pyr_4_view.setImage(self.pyr_4_shm.get_data(check=False,semNb=self.sem_nb), autoLevels=(self.autoscale_pyr_4_checkbox.checkState()==Qt.CheckState.Checked),autoRange=False)
+        self.pyr_3_masked_view.setImage(self.pyr_3_masked_shm.get_data(check=False,semNb=self.sem_nb), autoLevels=(self.autoscale_pyr_3_masked_checkbox.checkState()==Qt.CheckState.Checked),autoRange=False)
   
 
     def update_fft_wiew(self):
@@ -530,6 +533,12 @@ class MainWindow(QMainWindow):
             self.closed_loop_state_flag_shm.set_data(np.array([[1]],np.uint32))
         elif state == Qt.CheckState.Unchecked.value:
             self.closed_loop_state_flag_shm.set_data(np.array([[0]],np.uint32))
+
+    def save_slopes_check(self,state):
+        if state == Qt.CheckState.Checked.value:
+            self.save_slopes_state_flag_shm.set_data(np.array([[1]],np.uint32))
+        elif state == Qt.CheckState.Unchecked.value:
+            self.save_slopes_state_flag_shm.set_data(np.array([[0]],np.uint32))
 
     def order_dd_changed(self,value):
         self.dd_order_shm.set_data(np.array([[value]],np.uint32))
@@ -615,6 +624,11 @@ class MainWindow(QMainWindow):
         self.K_mat_dd_shm.set_data(K_mat_int)
         self.K_mat_omgi_shm.set_data(K_mat_int)
         self.K_mat_flag_shm.set_data(np.ones((1,1),dtype = np.uint32))
+
+    def start_record_and_close_loop(self):
+        self.record_process.start_process()
+        self.closed_loop_checkbox.setChecked(True)
+        self.closed_loop_state_flag_shm.set_data(np.array([[1]],np.uint32))
 
     def update_rate_dd_changed(self,value):
         if value:

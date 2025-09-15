@@ -45,10 +45,12 @@ fs = dao.shm(shm_path['G']['fs']).get_data()[0][0]
 record_time = dao.shm(shm_path['settings']['record_time']).get_data()[0][0]
 # cblue_shm = dao.shm(shm_path['control']['cblue'])
 dm_shm = dao.shm(shm_path['HW']['dm'])
-# slopes_shm = dao.shm(shm_path['control']['slopes'])
+save_slopes_state_flag = dao.shm(shm_path['settings']['save_slopes_state_flag']).get_data()[0][0] 
+slopes_shm = dao.shm(shm_path['HW']['slopes_3'])
 telemetry_shm = dao.shm(shm_path['telemetry']['telemetry'])
 telemetry_ts_shm = dao.shm(shm_path['telemetry']['telemetry_ts']) 
 pyramid_select_shm = dao.shm(shm_path['settings']['pyramid_select']) 
+flux_shm = dao.shm(shm_path['HW']['flux']) 
 epoch = np.datetime64('1970-01-01T00:00:00', 'us')
 n_fft = dao.shm(shm_path['settings']['n_fft']).get_data()[0][0]
 controller_select = dao.shm(shm_path['settings']['controller_select']).get_data()[0][0]
@@ -88,17 +90,20 @@ match controller_select:
         results_file.add('n_fft',n_fft)
         results_file.add('gain_margin',gain_margin)
 
-match pyramid_select_shm.get_data(check=False, semNb=sem_nb)[0][0]:
+match pyramid_select_shm.get_data(check=False)[0][0]:
     case 0:
         results_file.add('pyramid','4 sided')
+        modes_in_bis_shm = dao.shm(shm_path['HW']['modes_in_3sided'])
     case 1:
         results_file.add('pyramid','3 sided')
+        modes_in_bis_shm = dao.shm(shm_path['HW']['modes_in_4sided'])
 
 results_file.add('delay',delay)
 results_file.add('n modes controlled',n_modes_controlled)
 results_file.add('record time',record_time)
 
 modes_in_buf = np.zeros((record_its,n_modes))
+modes_in_bis_buf = np.zeros((record_its,n_modes))
 modes_out_buf = np.zeros((record_its,n_modes))
 voltages_buf = np.zeros((record_its,n_voltages))
 # pyr_flux_buf = np.zeros((record_its,1))
@@ -106,7 +111,11 @@ voltages_buf = np.zeros((record_its,n_voltages))
 
 modes_in_ts_buf = np.zeros((record_its,1),dtype=np.float64)
 modes_out_ts_buf = np.zeros((record_its,1),dtype=np.float64)
+flux_buf = np.zeros((record_its,1),dtype=np.float64)
 
+if save_slopes_state_flag:
+    n_slopes =  slopes_shm.get_data().shape[0]
+    slopes_buf = np.zeros((record_its,n_slopes))
 # cblue_shape = cblue_shm.get_data(check=False).shape
 # cblue_n_frames = 100
 # cblue_count = 0
@@ -116,13 +125,13 @@ modes_out_ts_buf = np.zeros((record_its,1),dtype=np.float64)
 for i in range(record_its):
 
     telemetry = telemetry_shm.get_data(check=True, semNb=sem_nb)
-    telemetry_ts = telemetry_ts_shm.get_data(check=False, semNb=sem_nb)
+    telemetry_ts = telemetry_ts_shm.get_data(check=False)
     modes_in = telemetry[0, :]
     modes_out =  telemetry[1, :]
     modes_in_ts = telemetry_ts[0, :]
     modes_out_ts =  telemetry_ts[1, :]
 
-    voltages = dm_shm.get_data(check=False, semNb=sem_nb).squeeze()
+    voltages = dm_shm.get_data(check=False).squeeze()
     # pyr_flux = norm_flux_pyr_img_shm.get_data(check=False, semNb=sem_nb).squeeze()
     # strehl = strehl_ratio_shm.get_data(check=False, semNb=sem_nb).squeeze()
 
@@ -131,6 +140,10 @@ for i in range(record_its):
     modes_in_ts_buf[i, :] = modes_in_ts 
     modes_out_ts_buf[i, :] =  modes_out_ts 
     modes_out_buf[i, :] = modes_out
+    flux_buf[i,:] = flux_shm.get_data(check=False)
+    modes_in_bis_buf[i,:] = modes_in_bis_shm.get_data(check=False).squeeze()
+    if save_slopes_state_flag:
+        slopes_buf[i,:] = slopes_shm.get_data(check=False).squeeze()
     # pyr_flux_buf[i, :] = pyr_flux
     # strehl_buf[i, :] = strehl
 
@@ -150,9 +163,11 @@ fits.writeto(os.path.join(full_path, "modes_out.fits"), modes_out_buf, overwrite
 fits.writeto(os.path.join(full_path, "modes_in_ts.fits"), modes_in_ts_buf, overwrite = True)
 fits.writeto(os.path.join(full_path, "modes_out_ts.fits"), modes_out_ts_buf, overwrite = True)
 fits.writeto(os.path.join(full_path, "voltages.fits"), voltages_buf, overwrite = True)
-# fits.writeto(os.path.join(full_path, "pyr_fluxes.fits"), pyr_flux_buf, overwrite = True)
+fits.writeto(os.path.join(full_path, "pyr_fluxes.fits"), flux_buf, overwrite = True)
 fits.writeto(os.path.join(full_path, "M2V.fits"), M2V, overwrite = True)
 fits.writeto(os.path.join(full_path, "S2M.fits"), S2M, overwrite = True)
+if save_slopes_state_flag:
+    fits.writeto(os.path.join(full_path, "slopes.fits"), slopes_buf, overwrite = True)
 # fits.writeto(os.path.join(full_path, "strehl.fits"), strehl_buf, overwrite = True)
 # fits.writeto(os.path.join(full_path, "cblue.fits"), cblue_buf, overwrite = True)
 results_file.save()

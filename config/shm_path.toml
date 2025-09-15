@@ -23,6 +23,7 @@ delay = '/tmp/delay.shm'
 
 [settings]
 closed_loop_state_flag = '/tmp/closed_loop_state_flag.shm'
+save_slopes_state_flag = '/tmp/save_slopes_state_flag.shm'
 controller_select = '/tmp/controller_select.shm'
 n_modes_dd = '/tmp/n_modes_dd.shm'
 n_modes_controlled = '/tmp/n_modes_controlled.shm'
@@ -59,13 +60,16 @@ telemetry_ts = '/tmp/telemetry_ts.shm'
 slopes_4sided = '/tmp/papyrus_slopes.im.shm'
 slopes_3sided = '/tmp/papyrus_slopes.im.shm' #TODO change
 modes_in_custom = '/tmp/modes.shm'
-modes_in_3sided = '/tmp/computed_modes.im.shm'
+modes_in_3sided = '/tmp/modes.shm'
 #modes_in_4sided = '/tmp/papyrus_modes.im.shm'
 modes_in_4sided = '/tmp/modes.shm'
 dm = '/tmp/dmCmd03.im.shm' 
 flat_dm = '/tmp/dmCmd00.im.shm'
 pixels_4sided = '/tmp/ocam2.im.shm'
 pixels_3sided = '/tmp/ocam2.im.shm' #TODO change
+pixels_masked_3sided = '/tmp/masked_pixels_3sided.im.shm' 
+flux = '/tmp/flux.shm'
+slopes_3 = '/tmp/slopes_3.shm'
 
 [calibration]
 mask = '/tmp/mask.shm'

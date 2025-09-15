@@ -47,12 +47,14 @@ t = np.arange(0,buf_size,dtype = np.float32)/fs
 t = t[:,np.newaxis]
 
 # loop variables
-
-
+pyr_3_img = dao.shm(shm_path['HW']['pixels_3sided']).get_data(check=False)
+pyr_3_img_masked = np.zeros_like(pyr_3_img,np.float32)
+flux = np.zeros((1,1),dtype = np.float32)
 
 
 M2V = dao.shm(shm_path['KL_mat']['M2V']).get_data(check=False)
 V2M = np.linalg.pinv(M2V)
+
 
 n_modes_dd = np.array([[n_modes]],dtype = np.uint32)
 n_modes_controlled = np.array([[n_modes]],dtype = np.uint32)
@@ -71,10 +73,10 @@ wait_time = np.array([[config['calibration']['wait_time']]],dtype = np.float32)
 n_fft_optimizer = np.array([[config['optimizer']['n_fft']]],dtype = np.uint32)
 dd_order = np.array([[20]],dtype = np.uint32)
 
-slopes_shm = dao.shm(shm_path['HW']['slopes_4sided'])
-slopes = slopes_shm.get_data()
-n_slopes = slopes.shape[0]
-S2M_custom =np.zeros((n_modes,n_slopes),dtype=np.float32)
+slopes_4_shm = dao.shm(shm_path['HW']['slopes_4sided'])
+slopes_4 = slopes_4_shm.get_data()
+n_slopes_4 = slopes_4.shape[0]
+S2M_custom =np.zeros((n_modes,n_slopes_4),dtype=np.float32)
 
 n_fft_max = config['optimizer']['n_fft_max']
 
@@ -93,8 +95,8 @@ mask = fits.getdata(os.path.join(data_dir, "mask.fits")).astype(np.uint16)
 bias_image = fits.getdata(os.path.join(data_dir, "bias_image.fits")).astype(np.uint16)
 ref_img_norm = fits.getdata(os.path.join(data_dir, "reference_image_normalized.fits")).astype(np.float32)
 S2M = fits.getdata(os.path.join(data_dir, "RM_S2KL.fits")).astype(np.float32)
-
-
+n_slopes_3 = S2M.shape[1]
+slopes_3 = np.zeros((n_slopes_3,1),np.float32)
 
 dao.shm(shm_path['time_domain_buff']['modes_in_buf'],modes_in_buf)
 dao.shm(shm_path['time_domain_buff']['modes_out_buf'],modes_out_buf)
@@ -116,6 +118,7 @@ dao.shm(shm_path['G']['fs'],fs)
 dao.shm(shm_path['G']['latency'],latency)
 
 dao.shm(shm_path['settings']['closed_loop_state_flag'],uint32_0)
+dao.shm(shm_path['settings']['save_slopes_state_flag'],uint32_0)
 dao.shm(shm_path['settings']['n_modes_dd'],n_modes_dd)
 dao.shm(shm_path['settings']['n_modes_controlled'],n_modes_controlled)
 
@@ -132,6 +135,9 @@ dao.shm(shm_path['KL_mat']['S2M'],S2M_custom)
 dao.shm(shm_path['KL_mat']['V2M'],V2M)
 
 dao.shm(shm_path['HW']['modes_in_custom'],modes)
+dao.shm(shm_path['HW']['pixels_masked_3sided'],pyr_3_img_masked)
+dao.shm(shm_path['HW']['flux'],flux)
+dao.shm(shm_path['HW']['slopes_3'],slopes_3)
 
 dao.shm(shm_path['S']['S_dd'],S_dd)
 dao.shm(shm_path['S']['S_omgi'],S_omgi)
