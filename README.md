@@ -14,21 +14,21 @@
 
 3. From inside ARPOGE/, build and install:
 
-   waf configure
-   waf
-   waf install
+   waf configure  
+   waf  
+   waf install  
 
 ---
 
 ## Run
 
-1. Launch the simulation:
+1. Launch papyrus
 
-   papy sim
+
 
 2. In ARPOGE/apps/, start the shared memory and GUI:
 
-   ipython setup_shm.py
+   ipython setup_shm.py  
    ipython gui.py
 
    - Open the GUI
