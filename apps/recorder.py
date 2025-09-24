@@ -157,7 +157,7 @@ for i in range(record_its):
 
 rms = np.mean(np.sum(np.square(modes_in_buf),axis=1))
 results_file.add('rms',rms)
-
+fits.writeto(os.path.join(full_path, "modes_in_bis.fits"), modes_in_bis_buf, overwrite = True)
 fits.writeto(os.path.join(full_path, "modes_in.fits"), modes_in_buf, overwrite = True)
 fits.writeto(os.path.join(full_path, "modes_out.fits"), modes_out_buf, overwrite = True)
 fits.writeto(os.path.join(full_path, "modes_in_ts.fits"), modes_in_ts_buf, overwrite = True)
