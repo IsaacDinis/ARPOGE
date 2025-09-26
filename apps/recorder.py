@@ -45,6 +45,10 @@ fs = dao.shm(shm_path['G']['fs']).get_data()[0][0]
 record_time = dao.shm(shm_path['settings']['record_time']).get_data()[0][0]
 # cblue_shm = dao.shm(shm_path['control']['cblue'])
 dm_shm = dao.shm(shm_path['HW']['dm'])
+dm0_shm = dao.shm(shm_path['HW']['dm0'])
+dm1_shm = dao.shm(shm_path['HW']['dm1'])
+dm2_shm = dao.shm(shm_path['HW']['dm2'])
+dm3_shm = dao.shm(shm_path['HW']['dm3'])
 save_slopes_state_flag = dao.shm(shm_path['settings']['save_slopes_state_flag']).get_data()[0][0] 
 slopes_shm = dao.shm(shm_path['HW']['slopes_3'])
 telemetry_shm = dao.shm(shm_path['telemetry']['telemetry'])
@@ -109,6 +113,11 @@ voltages_buf = np.zeros((record_its,n_voltages))
 # pyr_flux_buf = np.zeros((record_its,1))
 # strehl_buf = np.zeros((record_its,1))
 
+dm0_buf = np.zeros((record_its,n_voltages))
+dm1_buf = np.zeros((record_its,n_voltages))
+dm2_buf = np.zeros((record_its,n_voltages))
+dm3_buf = np.zeros((record_its,n_voltages))
+
 modes_in_ts_buf = np.zeros((record_its,1),dtype=np.float64)
 modes_out_ts_buf = np.zeros((record_its,1),dtype=np.float64)
 flux_buf = np.zeros((record_its,1),dtype=np.float64)
@@ -134,6 +143,16 @@ for i in range(record_its):
     voltages = dm_shm.get_data(check=False).squeeze()
     # pyr_flux = norm_flux_pyr_img_shm.get_data(check=False, semNb=sem_nb).squeeze()
     # strehl = strehl_ratio_shm.get_data(check=False, semNb=sem_nb).squeeze()
+    
+    dm0 = dm0_shm.get_data(check=False).squeeze()
+    dm1 = dm1_shm.get_data(check=False).squeeze()
+    dm2 = dm2_shm.get_data(check=False).squeeze()
+    dm3 = dm3_shm.get_data(check=False).squeeze()
+    
+    dm0_buf[i, :] = dm0
+    dm1_buf[i, :] = dm1
+    dm2_buf[i, :] = dm2
+    dm3_buf[i, :] = dm3
 
     modes_in_buf[i, :] = modes_in
     voltages_buf[i, :] = voltages
@@ -166,6 +185,13 @@ fits.writeto(os.path.join(full_path, "voltages.fits"), voltages_buf, overwrite =
 fits.writeto(os.path.join(full_path, "pyr_fluxes.fits"), flux_buf, overwrite = True)
 fits.writeto(os.path.join(full_path, "M2V.fits"), M2V, overwrite = True)
 fits.writeto(os.path.join(full_path, "S2M.fits"), S2M, overwrite = True)
+
+fits.writeto(os.path.join(full_path, "dm0.fits"), dm0_buf, overwrite = True)
+fits.writeto(os.path.join(full_path, "dm1.fits"), dm0_buf, overwrite = True)
+fits.writeto(os.path.join(full_path, "dm2.fits"), dm0_buf, overwrite = True)
+fits.writeto(os.path.join(full_path, "dm3.fits"), dm0_buf, overwrite = True)
+
+
 if save_slopes_state_flag:
     fits.writeto(os.path.join(full_path, "slopes.fits"), slopes_buf, overwrite = True)
 # fits.writeto(os.path.join(full_path, "strehl.fits"), strehl_buf, overwrite = True)
