@@ -49,7 +49,11 @@ dm0_shm = dao.shm(shm_path['HW']['dm0'])
 dm1_shm = dao.shm(shm_path['HW']['dm1'])
 dm2_shm = dao.shm(shm_path['HW']['dm2'])
 dm3_shm = dao.shm(shm_path['HW']['dm3'])
+pixels_4sided_shm = dao.shm(shm_path['HW']['pixels_4sided'])
+pixels_3sided_shm = dao.shm(shm_path['HW']['pixels_4sided'])
+
 save_slopes_state_flag = dao.shm(shm_path['settings']['save_slopes_state_flag']).get_data()[0][0] 
+save_pixels_state_flag = dao.shm(shm_path['settings']['save_pixels_state_flag']).get_data()[0][0] 
 slopes_shm = dao.shm(shm_path['HW']['slopes_3'])
 telemetry_shm = dao.shm(shm_path['telemetry']['telemetry'])
 telemetry_ts_shm = dao.shm(shm_path['telemetry']['telemetry_ts']) 
@@ -125,6 +129,12 @@ flux_buf = np.zeros((record_its,1),dtype=np.float64)
 if save_slopes_state_flag:
     n_slopes =  slopes_shm.get_data().shape[0]
     slopes_buf = np.zeros((record_its,n_slopes))
+
+if save_pixels_state_flag:
+    n_pixels_3sided =  pixels_4sided_shm.get_data().shape[0]
+    n_pixels_4sided =  pixels_3sided_shm.get_data().shape[0]
+    pixels_3sided_buf = np.zeros((record_its,n_pixels_3sided,n_pixels_3sided))
+    pixels_4sided_buf = np.zeros((record_its,n_pixels_4sided,n_pixels_4sided))
 # cblue_shape = cblue_shm.get_data(check=False).shape
 # cblue_n_frames = 100
 # cblue_count = 0
@@ -163,7 +173,10 @@ for i in range(record_its):
     modes_in_bis_buf[i,:] = modes_in_bis_shm.get_data(check=False).squeeze()
     if save_slopes_state_flag:
         slopes_buf[i,:] = slopes_shm.get_data(check=False).squeeze()
-    print(np.max(dm3))
+    if save_pixels_state_flag:
+        pixels_3sided_buf[i,:,:] = pixels_3sided_shm.get_data(check=False).squeeze()
+        pixels_4sided_buf[i,:,:] = pixels_4sided_shm.get_data(check=False).squeeze()
+
     # pyr_flux_buf[i, :] = pyr_flux
     # strehl_buf[i, :] = strehl
 
@@ -195,6 +208,9 @@ fits.writeto(os.path.join(full_path, "dm3.fits"), dm3_buf, overwrite = True)
 
 if save_slopes_state_flag:
     fits.writeto(os.path.join(full_path, "slopes.fits"), slopes_buf, overwrite = True)
+if save_pixels_state_flag:
+    fits.writeto(os.path.join(full_path, "pixels_4sided.fits"), pixels_4sided_buf, overwrite = True)
+    fits.writeto(os.path.join(full_path, "pixels_3sided.fits"), pixels_3sided_buf, overwrite = True)
 # fits.writeto(os.path.join(full_path, "strehl.fits"), strehl_buf, overwrite = True)
 # fits.writeto(os.path.join(full_path, "cblue.fits"), cblue_buf, overwrite = True)
 results_file.save()

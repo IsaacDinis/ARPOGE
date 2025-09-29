@@ -92,7 +92,7 @@ flat = np.zeros((n_act,1),dtype = np.float32)
 #Load calibratition matrices
 data_dir = os.path.join(this_script_dir, "../data/")
 mask = fits.getdata(os.path.join(data_dir, "mask.fits")).astype(np.uint16)
-bias_image = fits.getdata(os.path.join(data_dir, "bias_image.fits")).astype(np.uint16)
+
 ref_img_norm = fits.getdata(os.path.join(data_dir, "reference_image_normalized.fits")).astype(np.float32)
 S2M = fits.getdata(os.path.join(data_dir, "RM_S2KL.fits")).astype(np.float32)
 n_slopes_3 = S2M.shape[1]
@@ -119,6 +119,7 @@ dao.shm(shm_path['G']['latency'],latency)
 
 dao.shm(shm_path['settings']['closed_loop_state_flag'],uint32_0)
 dao.shm(shm_path['settings']['save_slopes_state_flag'],uint32_0)
+dao.shm(shm_path['settings']['save_pixels_state_flag'],uint32_0)
 dao.shm(shm_path['settings']['n_modes_dd'],n_modes_dd)
 dao.shm(shm_path['settings']['n_modes_controlled'],n_modes_controlled)
 
@@ -153,6 +154,5 @@ dao.shm(shm_path['event_flag']['pyramid_flag'],uint32_0)
 
 
 dao.shm(shm_path['calibration']['mask'],mask)
-dao.shm(shm_path['calibration']['bias_image'],bias_image)
 dao.shm(shm_path['calibration']['ref_img_norm'],ref_img_norm)
 dao.shm(shm_path['calibration']['S2M'],S2M)

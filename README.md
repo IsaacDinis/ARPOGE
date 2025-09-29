@@ -7,7 +7,6 @@
    export LD_LIBRARY_PATH=$HOME/ARPOGE/lib/:$LD_LIBRARY_PATH
 
 2. Add the required data files into ARPOGE/data/:
-   - bias_image.fits
    - mask.fits
    - reference_image_normalized.fits
    - RM_S2KL.fits (dimensions: n_kl × n_slopes)

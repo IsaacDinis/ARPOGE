@@ -24,6 +24,7 @@ delay = '/tmp/delay.shm'
 [settings]
 closed_loop_state_flag = '/tmp/closed_loop_state_flag.shm'
 save_slopes_state_flag = '/tmp/save_slopes_state_flag.shm'
+save_pixels_state_flag = '/tmp/save_pixels_state_flag.shm'
 controller_select = '/tmp/controller_select.shm'
 n_modes_dd = '/tmp/n_modes_dd.shm'
 n_modes_controlled = '/tmp/n_modes_controlled.shm'
@@ -77,6 +78,5 @@ slopes_3 = '/tmp/slopes_3.shm'
 
 [calibration]
 mask = '/tmp/mask.shm'
-bias_image = '/tmp/bias_image.shm'
 ref_img_norm = '/tmp/ref_img_norm.shm'
 S2M = '/tmp/S2M.shm' 

@@ -30,7 +30,6 @@ struct {
 } shm_path;
 
 struct {
-    int64_t n_pixels;
     int64_t sem_nb;
 
 } config;
@@ -112,9 +111,7 @@ int load_config() {
     toml_table_t *root = load_toml("../config/config.toml", errbuf, sizeof(errbuf));
     if (!root) return 1;
 
-    toml_table_t *common    = toml_table_in(root, "common");
     toml_table_t *sem_nb    = toml_table_in(root, "sem_nb");
-    if (common) toml_rtoi(toml_raw_in(common, "n_pixels"),  &config.n_pixels);
     if (sem_nb)    toml_rtoi(toml_raw_in(sem_nb, "pix2modes"),          &config.sem_nb);
 
     toml_free(root);

@@ -781,6 +781,19 @@
        <string>save slopes</string>
       </property>
      </widget>
+     <widget class="QCheckBox" name="save_pixels_checkbox">
+      <property name="geometry">
+       <rect>
+        <x>1120</x>
+        <y>190</y>
+        <width>121</width>
+        <height>24</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>save pixels</string>
+      </property>
+     </widget>
     </widget>
     <widget class="QWidget" name="tab">
      <attribute name="title">

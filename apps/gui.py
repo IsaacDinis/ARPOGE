@@ -353,6 +353,7 @@ class MainWindow(QMainWindow):
         
         self.closed_loop_checkbox.stateChanged.connect(self.closed_loop_check)
         self.save_slopes_checkbox.stateChanged.connect(self.save_slopes_check)
+        self.save_pixels_checkbox.stateChanged.connect(self.save_pixels_check)
         self.reset_state_mat_button.clicked.connect(self.reset_state_mat)
 
         self.save_flat_button.clicked.connect(self.save_flat)
@@ -399,6 +400,7 @@ class MainWindow(QMainWindow):
 
         self.closed_loop_state_flag_shm = dao.shm(shm_path['settings']['closed_loop_state_flag']) 
         self.save_slopes_state_flag_shm = dao.shm(shm_path['settings']['save_slopes_state_flag']) 
+        self.save_pixels_state_flag_shm = dao.shm(shm_path['settings']['save_pixels_state_flag']) 
         self.n_modes_dd_shm = dao.shm(shm_path['settings']['n_modes_dd']) 
         self.n_modes_controlled_shm = dao.shm(shm_path['settings']['n_modes_controlled'])
         self.dd_update_rate_shm = dao.shm(shm_path['settings']['dd_update_rate'])
@@ -539,6 +541,12 @@ class MainWindow(QMainWindow):
             self.save_slopes_state_flag_shm.set_data(np.array([[1]],np.uint32))
         elif state == Qt.CheckState.Unchecked.value:
             self.save_slopes_state_flag_shm.set_data(np.array([[0]],np.uint32))
+
+    def save_pixels_check(self,state):
+        if state == Qt.CheckState.Checked.value:
+            self.save_pixels_state_flag_shm.set_data(np.array([[1]],np.uint32))
+        elif state == Qt.CheckState.Unchecked.value:
+            self.save_pixels_state_flag_shm.set_data(np.array([[0]],np.uint32))
 
     def order_dd_changed(self,value):
         self.dd_order_shm.set_data(np.array([[value]],np.uint32))
