@@ -150,7 +150,7 @@ void free_shm_path() {
 // int load_K_mat(float* K_mat){
 int load_K_mat(IMAGE *K_mat_shm, uint32_t controller_select){
   
-  enum{INTEGRATOR,OMGI,DD};
+  enum{INTEGRATOR,DD,OMGI};
   switch (controller_select) {
     case INTEGRATOR:
       daoShmShm2Img(shm_path.K_mat_int, K_mat_shm);
