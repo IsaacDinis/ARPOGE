@@ -194,7 +194,7 @@ int real_time_loop(){
         wfs_time += get_time_seconds() - start_wfs;
         start_compute = get_time_seconds();
       #endif
-      modes_shm->md[0].cnt2 = pixels_shm->md[0].cnt2;
+      modes_shm->md[0].cnt2 = pixels_shm->md[0].cnt0;
       pixels_masked_shm->md[0].cnt2 = pixels_shm->md[0].cnt2;
       flux_shm->md[0].cnt2 = pixels_shm->md[0].cnt2;
       slopes_3_shm->md[0].cnt2 = pixels_shm->md[0].cnt2;

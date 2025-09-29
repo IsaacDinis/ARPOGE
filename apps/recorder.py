@@ -103,9 +103,11 @@ match pyramid_select_shm.get_data(check=False)[0][0]:
     case 0:
         results_file.add('pyramid','4 sided')
         modes_in_bis_shm = dao.shm(shm_path['HW']['modes_in_3sided'])
+        pixels_shm = pixels_4sided_shm
     case 1:
         results_file.add('pyramid','3 sided')
         modes_in_bis_shm = dao.shm(shm_path['HW']['modes_in_4sided'])
+        pixels_shm = pixels_3sided_shm
 
 results_file.add('delay',delay)
 results_file.add('n modes controlled',n_modes_controlled)
@@ -115,8 +117,11 @@ modes_in_buf = np.zeros((record_its,n_modes))
 modes_in_bis_buf = np.zeros((record_its,n_modes))
 modes_out_buf = np.zeros((record_its,n_modes))
 voltages_buf = np.zeros((record_its,n_voltages))
-# pyr_flux_buf = np.zeros((record_its,1))
+
 # strehl_buf = np.zeros((record_its,1))
+
+hrtc_counter_buf = np.zeros((record_its,1))
+pyramid_counter_buf = np.zeros((record_its,1))
 
 dm0_buf = np.zeros((record_its,n_voltages))
 dm1_buf = np.zeros((record_its,n_voltages))
@@ -150,7 +155,8 @@ for i in range(record_its):
     modes_out =  telemetry[1, :]
     modes_in_ts = telemetry_ts[0, :]
     modes_out_ts =  telemetry_ts[1, :]
-
+    hrtc_counter_buf[i, :] = telemetry_shm.get_meta_data()['cnt2']
+    pyramid_counter_buf[i, :] = pixels_shm.get_counter()
     voltages = dm_shm.get_data(check=False).squeeze()
     # pyr_flux = norm_flux_pyr_img_shm.get_data(check=False, semNb=sem_nb).squeeze()
     # strehl = strehl_ratio_shm.get_data(check=False, semNb=sem_nb).squeeze()
@@ -207,7 +213,8 @@ fits.writeto(os.path.join(full_path, "dm1.fits"), dm1_buf, overwrite = True)
 fits.writeto(os.path.join(full_path, "dm2.fits"), dm2_buf, overwrite = True)
 fits.writeto(os.path.join(full_path, "dm3.fits"), dm3_buf, overwrite = True)
 fits.writeto(os.path.join(full_path, "cred3_frame_counter.fits"), cred3_frame_counter_buf, overwrite = True)
-
+fits.writeto(os.path.join(full_path, "hrtc_counter.fits"), hrtc_counter_buf, overwrite = True)
+fits.writeto(os.path.join(full_path, "pyramid_counter.fits"), pyramid_counter_buf, overwrite = True)
 
 if save_slopes_state_flag:
     fits.writeto(os.path.join(full_path, "slopes.fits"), slopes_buf, overwrite = True)

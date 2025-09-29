@@ -208,7 +208,6 @@ int real_time_loop(){
             printf("Mean Computation time = %.2f ms\n", (computation_time / counter) * 1e3);
             printf("Max loop time = %.2f ms\n", max_val * 1e3);
             printf("Frames missed = %d\n\n", frame_missed);
-
             // Reset counters
             computation_time = wfs_time = 0;
             counter = -1;

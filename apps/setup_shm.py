@@ -149,6 +149,7 @@ dao.shm(shm_path['S']['f_opti'],f_opti)
 dao.shm(shm_path['telemetry']['telemetry'],telemetry)
 dao.shm(shm_path['telemetry']['telemetry_ts'],telemetry_ts)
 
+
 dao.shm(shm_path['event_flag']['reset_flag'],uint32_0)
 dao.shm(shm_path['event_flag']['K_mat_flag'],uint32_0)
 dao.shm(shm_path['event_flag']['pyramid_flag'],uint32_0)

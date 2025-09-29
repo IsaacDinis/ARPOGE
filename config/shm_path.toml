@@ -57,6 +57,7 @@ V2M = '/tmp/V2M.shm'
 telemetry = '/tmp/telemetry.shm'
 telemetry_ts = '/tmp/telemetry_ts.shm'
 
+
 [HW]
 slopes_4sided = '/tmp/papyrus_slopes.im.shm'
 slopes_3sided = '/tmp/papyrus_slopes.im.shm' #TODO change
