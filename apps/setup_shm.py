@@ -139,6 +139,7 @@ dao.shm(shm_path['HW']['modes_in_custom'],modes)
 dao.shm(shm_path['HW']['pixels_masked_3sided'],pyr_3_img_masked)
 dao.shm(shm_path['HW']['flux'],flux)
 dao.shm(shm_path['HW']['slopes_3'],slopes_3)
+dao.shm(shm_path['HW']['cred3_frame_counter'],np.zeros((1,1),np.uint16))
 
 dao.shm(shm_path['S']['S_dd'],S_dd)
 dao.shm(shm_path['S']['S_omgi'],S_omgi)

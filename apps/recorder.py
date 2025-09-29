@@ -59,6 +59,7 @@ telemetry_shm = dao.shm(shm_path['telemetry']['telemetry'])
 telemetry_ts_shm = dao.shm(shm_path['telemetry']['telemetry_ts']) 
 pyramid_select_shm = dao.shm(shm_path['settings']['pyramid_select']) 
 flux_shm = dao.shm(shm_path['HW']['flux']) 
+cred3_frame_counter_shm = dao.shm(shm_path['HW']['cred3_frame_counter']) 
 epoch = np.datetime64('1970-01-01T00:00:00', 'us')
 n_fft = dao.shm(shm_path['settings']['n_fft']).get_data()[0][0]
 controller_select = dao.shm(shm_path['settings']['controller_select']).get_data()[0][0]
@@ -121,7 +122,7 @@ dm0_buf = np.zeros((record_its,n_voltages))
 dm1_buf = np.zeros((record_its,n_voltages))
 dm2_buf = np.zeros((record_its,n_voltages))
 dm3_buf = np.zeros((record_its,n_voltages))
-
+cred3_frame_counter_buf = np.zeros((record_its,1),dtype=np.uint16)
 modes_in_ts_buf = np.zeros((record_its,1),dtype=np.float64)
 modes_out_ts_buf = np.zeros((record_its,1),dtype=np.float64)
 flux_buf = np.zeros((record_its,1),dtype=np.float64)
@@ -170,6 +171,7 @@ for i in range(record_its):
     modes_out_ts_buf[i, :] =  modes_out_ts 
     modes_out_buf[i, :] = modes_out
     flux_buf[i,:] = flux_shm.get_data(check=False)
+    cred3_frame_counter_buf[i,:] = cred3_frame_counter_shm.get_data(check=False)
     modes_in_bis_buf[i,:] = modes_in_bis_shm.get_data(check=False).squeeze()
     if save_slopes_state_flag:
         slopes_buf[i,:] = slopes_shm.get_data(check=False).squeeze()
@@ -204,6 +206,7 @@ fits.writeto(os.path.join(full_path, "dm0.fits"), dm0_buf, overwrite = True)
 fits.writeto(os.path.join(full_path, "dm1.fits"), dm1_buf, overwrite = True)
 fits.writeto(os.path.join(full_path, "dm2.fits"), dm2_buf, overwrite = True)
 fits.writeto(os.path.join(full_path, "dm3.fits"), dm3_buf, overwrite = True)
+fits.writeto(os.path.join(full_path, "cred3_frame_counter.fits"), cred3_frame_counter_buf, overwrite = True)
 
 
 if save_slopes_state_flag:
