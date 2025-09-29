@@ -30,7 +30,7 @@ modes_out_fft_shm = dao.shm(shm_path['frequency_domain_buff']['modes_out_fft'])
 pol_fft_shm = dao.shm(shm_path['frequency_domain_buff']['pol_fft'])
 f_shm = dao.shm(shm_path['frequency_domain_buff']['f'])
 
-fs = dao.shm(shm_path['G']['fs']).get_data()[0][0]
+
 
 closed_loop_state_flag_shm = dao.shm(shm_path['settings']['closed_loop_state_flag'])
 
@@ -39,6 +39,7 @@ time_start = time.perf_counter()
 while True:
     # if (time.perf_counter() - time_start > update_rate and closed_loop_state_flag_shm.get_data(check=False, semNb=sem_nb)):
     if (time.perf_counter() - time_start > update_rate):
+        fs = dao.shm(shm_path['G']['fs']).get_data()[0][0]
         pol_buf = pol_buf_shm.get_data(check = True, semNb=sem_nb)
         res_buf = modes_in_buf_shm.get_data(check = True, semNb=sem_nb)
         modes_out_buf = modes_out_buf_shm.get_data(check = True, semNb=sem_nb)

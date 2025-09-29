@@ -344,6 +344,11 @@ class MainWindow(QMainWindow):
         self.gain_spinbox.valueChanged.connect(self.gain_changed)
         self.gain_changed(self.gain_spinbox.value())
 
+        self.fs_spinbox.valueChanged.connect(self.fs_changed)
+        self.fs_changed(self.fs_spinbox.value())
+
+        self.delay_spinbox.valueChanged.connect(self.delay_changed)
+        self.delay_changed(self.delay_spinbox.value())
 
         self.n_modes_spinbox.valueChanged.connect(self.n_modes_changed)
         self.n_modes_changed(self.n_modes_spinbox.value())
@@ -551,6 +556,12 @@ class MainWindow(QMainWindow):
     def order_dd_changed(self,value):
         self.dd_order_shm.set_data(np.array([[value]],np.uint32))
         self.reset_dd_controller()
+
+    def fs_changed(self,value):
+        self.fs_shm.set_data(np.array([[value]],np.float32))
+
+    def delay_changed(self,value):
+        self.delay_shm.set_data(np.array([[value]],np.float32))
 
     def n_modes_changed(self,value):
         self.n_modes_controlled_shm.set_data(np.array([[value]],np.uint32))
