@@ -163,6 +163,7 @@ for i in range(record_its):
     modes_in_bis_buf[i,:] = modes_in_bis_shm.get_data(check=False).squeeze()
     if save_slopes_state_flag:
         slopes_buf[i,:] = slopes_shm.get_data(check=False).squeeze()
+    print(np.max(dm3))
     # pyr_flux_buf[i, :] = pyr_flux
     # strehl_buf[i, :] = strehl
 
@@ -187,9 +188,9 @@ fits.writeto(os.path.join(full_path, "M2V.fits"), M2V, overwrite = True)
 fits.writeto(os.path.join(full_path, "S2M.fits"), S2M, overwrite = True)
 
 fits.writeto(os.path.join(full_path, "dm0.fits"), dm0_buf, overwrite = True)
-fits.writeto(os.path.join(full_path, "dm1.fits"), dm0_buf, overwrite = True)
-fits.writeto(os.path.join(full_path, "dm2.fits"), dm0_buf, overwrite = True)
-fits.writeto(os.path.join(full_path, "dm3.fits"), dm0_buf, overwrite = True)
+fits.writeto(os.path.join(full_path, "dm1.fits"), dm1_buf, overwrite = True)
+fits.writeto(os.path.join(full_path, "dm2.fits"), dm2_buf, overwrite = True)
+fits.writeto(os.path.join(full_path, "dm3.fits"), dm3_buf, overwrite = True)
 
 
 if save_slopes_state_flag:
