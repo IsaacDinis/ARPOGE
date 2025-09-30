@@ -16,7 +16,7 @@ from astropy.io import fits
 import subprocess
 import os
 import importlib
-
+import signal
 import control as ct
 import ctypes
 import datetime

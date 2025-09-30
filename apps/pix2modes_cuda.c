@@ -195,9 +195,9 @@ int real_time_loop(){
         start_compute = get_time_seconds();
       #endif
       modes_shm->md[0].cnt2 = pixels_shm->md[0].cnt0;
-      pixels_masked_shm->md[0].cnt2 = pixels_shm->md[0].cnt2;
-      flux_shm->md[0].cnt2 = pixels_shm->md[0].cnt2;
-      slopes_3_shm->md[0].cnt2 = pixels_shm->md[0].cnt2;
+      pixels_masked_shm->md[0].cnt2 = pixels_shm->md[0].cnt0;
+      flux_shm->md[0].cnt2 = pixels_shm->md[0].cnt0;
+      slopes_3_shm->md[0].cnt2 = pixels_shm->md[0].cnt0;
       norm_flux = 0.0f;
       for (uint32_t i = 0; i < n_pix; i++) {
         for (uint32_t j = 0; j < n_pix; j++) {
