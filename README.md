@@ -8,6 +8,7 @@
 
 2. Add the required data files into ARPOGE/data/:
    - mask.fits
+   - bias_image.fits
    - reference_image_normalized.fits
    - RM_S2KL.fits (dimensions: n_kl × n_slopes)
 

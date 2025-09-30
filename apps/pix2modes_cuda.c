@@ -23,6 +23,7 @@ struct {
     char *pixels;
     char *pixels_masked;
     char *mask;
+    char *bias_image;
     char *ref_img_norm;
     char *S2M;
     char *flux;
@@ -101,6 +102,7 @@ int load_shm_path() {
         toml_rtos(toml_raw_in(calibration, "mask"),         &shm_path.mask);  
         toml_rtos(toml_raw_in(calibration, "ref_img_norm"), &shm_path.ref_img_norm);
         toml_rtos(toml_raw_in(calibration, "S2M"),          &shm_path.S2M);
+        toml_rtos(toml_raw_in(calibration, "bias_image"),   &shm_path.bias_image);
     }
     toml_free(root);
     return 0;
@@ -127,6 +129,7 @@ void free_shm_path() {
     free(shm_path.pixels_masked);
     free(shm_path.flux);
     free(shm_path.slopes_3);
+    free(shm_path.bias_image);
 }
 
 int real_time_loop(){
@@ -140,6 +143,7 @@ int real_time_loop(){
   IMAGE *ref_img_norm_shm = (IMAGE*) malloc(sizeof(IMAGE));
   IMAGE *S2M_shm = (IMAGE*) malloc(sizeof(IMAGE));
   IMAGE *slopes_3_shm = (IMAGE*) malloc(sizeof(IMAGE));
+  IMAGE *bias_image_shm = (IMAGE*) malloc(sizeof(IMAGE));
   daoShmShm2Img(shm_path.modes, modes_shm);
   daoShmShm2Img(shm_path.pixels, pixels_shm);
   daoShmShm2Img(shm_path.pixels_masked, pixels_masked_shm);
@@ -148,7 +152,7 @@ int real_time_loop(){
   daoShmShm2Img(shm_path.ref_img_norm, ref_img_norm_shm);
   daoShmShm2Img(shm_path.S2M, S2M_shm);
   daoShmShm2Img(shm_path.slopes_3, slopes_3_shm);
-
+  daoShmShm2Img(shm_path.bias_image, bias_image_shm);
   uint32_t n_pix = pixels_shm->md[0].size[0] ;
   uint32_t n_slopes = S2M_shm->md[0].size[1];
   uint32_t n_modes = S2M_shm->md[0].size[0];
@@ -202,7 +206,7 @@ int real_time_loop(){
       for (uint32_t i = 0; i < n_pix; i++) {
         for (uint32_t j = 0; j < n_pix; j++) {
           uint32_t idx = i * n_pix + j;
-          float corrected = (float)pixels_shm->array.UI16[idx];
+          float corrected = (float)pixels_shm->array.UI16[idx] - (float) bias_image_shm->array.UI16[idx];
           float masked = corrected * (float)mask_shm->array.UI16[idx];
           pixels_masked_shm->array.F[idx] = masked;
           // printf("tip = %d\n\n", pixels_shm->array.UI16[idx]);
@@ -309,6 +313,7 @@ int real_time_loop(){
   free(slopes_3_shm);
   cublasDestroy(handle);
   cudaFree(d_S2M);
+  free(bias_image_shm);
   cudaFree(d_slopes);
   cudaFree(d_modes);
   return 0;
