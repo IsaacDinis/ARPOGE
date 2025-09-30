@@ -28,6 +28,7 @@ struct {
     char *S2M;
     char *flux;
     char *slopes_3;
+    char *cred3_frame_cnt;
 } shm_path;
 
 struct {
@@ -96,6 +97,7 @@ int load_shm_path() {
         toml_rtos(toml_raw_in(HW, "pixels_masked_3sided"),   &shm_path.pixels_masked);
         toml_rtos(toml_raw_in(HW, "flux"),   &shm_path.flux);
         toml_rtos(toml_raw_in(HW, "slopes_3"),   &shm_path.slopes_3);
+        toml_rtos(toml_raw_in(HW, "cred3_frame_counter"),   &shm_path.cred3_frame_cnt);
     }
     toml_table_t *calibration = toml_table_in(root, "calibration");
     if (calibration) {
@@ -128,6 +130,7 @@ void free_shm_path() {
     free(shm_path.S2M);
     free(shm_path.pixels_masked);
     free(shm_path.flux);
+    free(shm_path.cred3_frame_cnt);
     free(shm_path.slopes_3);
     free(shm_path.bias_image);
 }
@@ -138,6 +141,7 @@ int real_time_loop(){
   IMAGE *pixels_shm = (IMAGE*) malloc(sizeof(IMAGE));
   IMAGE *pixels_masked_shm = (IMAGE*) malloc(sizeof(IMAGE));
   IMAGE *flux_shm = (IMAGE*) malloc(sizeof(IMAGE));
+  IMAGE *cred3_frame_cnt_shm = (IMAGE*) malloc(sizeof(IMAGE));
   IMAGE *modes_shm = (IMAGE*) malloc(sizeof(IMAGE));
   IMAGE *mask_shm = (IMAGE*) malloc(sizeof(IMAGE));
   IMAGE *ref_img_norm_shm = (IMAGE*) malloc(sizeof(IMAGE));
@@ -148,6 +152,7 @@ int real_time_loop(){
   daoShmShm2Img(shm_path.pixels, pixels_shm);
   daoShmShm2Img(shm_path.pixels_masked, pixels_masked_shm);
   daoShmShm2Img(shm_path.flux, flux_shm);
+  daoShmShm2Img(shm_path.cred3_frame_cnt, cred3_frame_cnt_shm);
   daoShmShm2Img(shm_path.mask, mask_shm);
   daoShmShm2Img(shm_path.ref_img_norm, ref_img_norm_shm);
   daoShmShm2Img(shm_path.S2M, S2M_shm);
@@ -201,8 +206,12 @@ int real_time_loop(){
       modes_shm->md[0].cnt2 = pixels_shm->md[0].cnt0;
       pixels_masked_shm->md[0].cnt2 = pixels_shm->md[0].cnt0;
       flux_shm->md[0].cnt2 = pixels_shm->md[0].cnt0;
+      cred3_frame_cnt_shm->md[0].cnt2 = pixels_shm->md[0].cnt0;
       slopes_3_shm->md[0].cnt2 = pixels_shm->md[0].cnt0;
       norm_flux = 0.0f;
+      cred3_frame_cnt_shm->array.UI16[0] = pixels_shm->array.UI16[0]; // first pixel is the counter
+      pixels_shm->array.UI16[0] = 0; // set first pixel to 0
+      daoShmImagePart2ShmFinalize(cred3_frame_cnt_shm);
       for (uint32_t i = 0; i < n_pix; i++) {
         for (uint32_t j = 0; j < n_pix; j++) {
           uint32_t idx = i * n_pix + j;
@@ -305,6 +314,7 @@ int real_time_loop(){
   free(slopes);
   free(pixels_masked_shm);
   free(flux_shm);
+  free(cred3_frame_cnt_shm);
   free(pixels_shm);
   free(modes_shm);
   free(mask_shm);
