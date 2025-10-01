@@ -49,6 +49,7 @@ t = t[:,np.newaxis]
 # loop variables
 pyr_3_img = dao.shm(shm_path['HW']['pixels_3sided']).get_data(check=False)
 pyr_3_img_masked = np.zeros_like(pyr_3_img,np.float32)
+pyr_3_img_wo_bias = np.zeros_like(pyr_3_img,np.float32)
 flux = np.zeros((1,1),dtype = np.float32)
 
 
@@ -137,6 +138,7 @@ dao.shm(shm_path['KL_mat']['V2M'],V2M)
 
 dao.shm(shm_path['HW']['modes_in_custom'],modes)
 dao.shm(shm_path['HW']['pixels_masked_3sided'],pyr_3_img_masked)
+dao.shm(shm_path['HW']['pixels_wo_bias_3sided'],pyr_3_img_wo_bias)
 dao.shm(shm_path['HW']['flux'],flux)
 dao.shm(shm_path['HW']['slopes_3'],slopes_3)
 dao.shm(shm_path['HW']['cred3_frame_counter'],np.zeros((1,1),np.uint16))

@@ -399,7 +399,7 @@ class MainWindow(QMainWindow):
         with open(os.path.join(this_script_dir,'../config/shm_path.toml'), 'r') as f:
             shm_path = toml.load(f)
 
-        self.pyr_3_shm                     = dao.shm(shm_path['HW']['pixels_3sided'])             
+        self.pyr_3_shm                     = dao.shm(shm_path['HW']['pixels_wo_bias_3sided'])             
         self.pyr_3_masked_shm                     = dao.shm(shm_path['HW']['pixels_masked_3sided'])
 
 

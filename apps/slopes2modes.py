@@ -16,10 +16,10 @@ with open(os.path.join(this_script_dir,'../config/shm_path.toml'), 'r') as f:
 modes_shm = dao.shm(shm_path['HW']['modes_in_custom'])
 pixels_shm = dao.shm(shm_path['HW']['pixels_3sided'])
 
-data_dir = os.path.join(this_script_dir, "../data_3/")
+data_dir = os.path.join(this_script_dir, "../data/")
 mask = fits.getdata(os.path.join(data_dir, "mask.fits"))
 reference_image_normalized = fits.getdata(os.path.join(data_dir, "reference_image_normalized.fits"))
-IM_KL2S = fits.getdata(os.path.join(data_dir, "response_matrix_KL2S_filtered_nact_17_amp_0.1_3s_pyr_20250929_230337.fits"))
+IM_KL2S = fits.getdata(os.path.join(data_dir, "IM_KL2S.fits"))
 
 def compute_pyr_slopes(normalized_pyr_img, normalized_ref_img):
     slopes_image = normalized_pyr_img - normalized_ref_img
