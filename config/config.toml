@@ -35,7 +35,7 @@ amp = 0.5
 max_voltage = 1
 
 [sem_nb]
-hrtc = 6
+hrtc = 9
 pix2modes = 5
 pol = 7
 fft = 8

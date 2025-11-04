@@ -63,22 +63,25 @@ slopes_4sided = '/tmp/papyrus_slopes.im.shm'
 slopes_3sided = '/tmp/papyrus_slopes.im.shm' #TODO change
 modes_in_custom = '/tmp/modes.shm'
 modes_in_3sided = '/tmp/modes.shm'
-#modes_in_4sided = '/tmp/papyrus_modes.im.shm'
-modes_in_4sided = '/tmp/modes.shm'
+modes_in_4sided = '/tmp/papyrus_modes.im.shm'
+#modes_in_4sided = '/tmp/modes.shm'
 dm = '/tmp/dmCmd03.im.shm' 
-flat_dm = '/tmp/dmCmd00.im.shm'
+flat_dm = '/tmp/dmCmd01.im.shm'
 dm0 = '/tmp/dmCmd00.im.shm'
 dm1 = '/tmp/dmCmd01.im.shm'
 dm2 = '/tmp/dmCmd02.im.shm'
 dm3 = '/tmp/dmCmd03.im.shm'
 pixels_4sided = '/tmp/ocam2.im.shm'
-pixels_3sided = '/tmp/ocam2.im.shm' #TODO change
+pixels_3sided = '/tmp/cred3.im.shm'
 pixels_wo_bias_3sided = '/tmp/pixels_wo_bias_3sided.shm' #pixels_wo_bias_shm
-pixels_masked_3sided = '/tmp/masked_pixels_3sided.shm' 
+pixels_masked_3sided = '/tmp/masked_pixels_3sided.shm'
+pixels_masked_wo_ref_3sided = '/tmp/pixels_masked_wo_ref_3sided.shm' 
+
 flux = '/tmp/flux.shm'
 slopes_3 = '/tmp/slopes_3.shm'
 cred3_frame_counter = '/tmp/cred3_frame_counter.shm'
-
+cblue = '/tmp/cblue.im.shm'
+cred2 = '/tmp/cred2.im.shm'
 [calibration]
 mask = '/tmp/mask.shm'
 ref_img_norm = '/tmp/ref_img_norm.shm'

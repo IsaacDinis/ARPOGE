@@ -340,7 +340,7 @@ class MainWindow(QMainWindow):
         self.view_update_timer.timeout.connect(self.update_modes_amp_wiew)
         self.optimization_dd_timer = QTimer()
         self.optimization_dd_timer.timeout.connect(self.optimization_dd_process.start_process)
-        self.view_update_timer.start(100) # ms 
+        self.view_update_timer.start(200) # ms 
 
         print("init done")
     def init_spinboxes(self):
@@ -399,8 +399,10 @@ class MainWindow(QMainWindow):
         with open(os.path.join(this_script_dir,'../config/shm_path.toml'), 'r') as f:
             shm_path = toml.load(f)
 
-        self.pyr_3_shm                     = dao.shm(shm_path['HW']['pixels_wo_bias_3sided'])             
-        self.pyr_3_masked_shm                     = dao.shm(shm_path['HW']['pixels_masked_3sided'])
+        self.pyr_3_shm                     = dao.shm(shm_path['HW']['pixels_3sided'])             
+        self.pyr_3_masked_shm              = dao.shm(shm_path['HW']['pixels_masked_3sided'])
+        self.pyr_3_wo_bias_shm             = dao.shm(shm_path['HW']['pixels_wo_bias_3sided'])             
+        self.pyr_3_masked_wo_ref_shm       = dao.shm(shm_path['HW']['pixels_masked_wo_ref_3sided'])
 
 
         self.modes_in_fft_shm = dao.shm(shm_path['frequency_domain_buff']['modes_in_fft'])
@@ -490,8 +492,16 @@ class MainWindow(QMainWindow):
             setattr(self, attr_name, view)
 
     def update_images(self):
-        self.pyr_3_view.setImage(self.pyr_3_shm.get_data(check=False,semNb=self.sem_nb), autoLevels=(self.autoscale_pyr_3_checkbox.checkState()==Qt.CheckState.Checked),autoRange=False)
-        self.pyr_3_masked_view.setImage(self.pyr_3_masked_shm.get_data(check=False,semNb=self.sem_nb), autoLevels=(self.autoscale_pyr_3_masked_checkbox.checkState()==Qt.CheckState.Checked),autoRange=False)
+        if self.remove_bias_checkbox.checkState()==Qt.CheckState.Checked:
+            self.pyr_3_view.setImage(self.pyr_3_wo_bias_shm.get_data(check=False,semNb=self.sem_nb), autoLevels=(self.autoscale_pyr_3_checkbox.checkState()==Qt.CheckState.Checked),autoRange=False)
+        else:
+            self.pyr_3_view.setImage(self.pyr_3_shm.get_data(check=False,semNb=self.sem_nb), autoLevels=(self.autoscale_pyr_3_checkbox.checkState()==Qt.CheckState.Checked),autoRange=False)
+        
+        if self.remove_ref_checkbox.checkState()==Qt.CheckState.Checked:
+            self.pyr_3_masked_view.setImage(self.pyr_3_masked_wo_ref_shm.get_data(check=False,semNb=self.sem_nb), autoLevels=(self.autoscale_pyr_3_masked_checkbox.checkState()==Qt.CheckState.Checked),autoRange=False)
+        else:
+            self.pyr_3_masked_view.setImage(self.pyr_3_masked_shm.get_data(check=False,semNb=self.sem_nb), autoLevels=(self.autoscale_pyr_3_masked_checkbox.checkState()==Qt.CheckState.Checked),autoRange=False)
+
   
 
     def update_fft_wiew(self):
@@ -594,7 +604,9 @@ class MainWindow(QMainWindow):
             print("File: dm_flat_papy.fits not found")
         calib_flat = 0.
         #flat = self.dm_shm.get_data(check=False, semNb=self.sem_nb)
-        flat = (np.mean([self.dm_shm.get_data(check=False, semNb=self.sem_nb) for i in range(10)], axis=0))
+        flat = (np.mean([self.dm_shm.get_data(check=True, semNb=self.sem_nb) for i in range(10)], axis=0))
+        flat_prev = self.flat_dm_shm.get_data(check=False)
+        flat += flat_prev
         fits.writeto(os.path.join(data_dir, "flat_cl.fits"),flat, overwrite = True)
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         fits.writeto(os.path.join(data_dir, f'flat_{timestamp}.fits'),flat, overwrite = True)
@@ -682,6 +694,7 @@ class MainWindow(QMainWindow):
 
     def update_pyramid_select(self, value):
         self.pyramid_select_shm.set_data(np.array([[value]],np.uint32))
+        self.pyramid_flag_shm.set_data(np.ones((1,1),np.uint32))
 
     def closeEvent(self, event):
         self.record_process.stop_process()

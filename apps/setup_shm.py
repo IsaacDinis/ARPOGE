@@ -93,7 +93,7 @@ flat = np.zeros((n_act,1),dtype = np.float32)
 #Load calibratition matrices
 data_dir = os.path.join(this_script_dir, "../data/")
 mask = fits.getdata(os.path.join(data_dir, "mask.fits")).astype(np.uint16)
-bias_image = fits.getdata(os.path.join(data_dir, "bias_image.fits")).astype(np.uint16)
+bias_image = fits.getdata(os.path.join(data_dir, "bias_image.fits")).astype(np.float32)
 ref_img_norm = fits.getdata(os.path.join(data_dir, "reference_image_normalized.fits")).astype(np.float32)
 S2M = fits.getdata(os.path.join(data_dir, "RM_S2KL.fits")).astype(np.float32)
 n_slopes_3 = S2M.shape[1]
@@ -138,6 +138,7 @@ dao.shm(shm_path['KL_mat']['V2M'],V2M)
 
 dao.shm(shm_path['HW']['modes_in_custom'],modes)
 dao.shm(shm_path['HW']['pixels_masked_3sided'],pyr_3_img_masked)
+dao.shm(shm_path['HW']['pixels_masked_wo_ref_3sided'],pyr_3_img_masked)
 dao.shm(shm_path['HW']['pixels_wo_bias_3sided'],pyr_3_img_wo_bias)
 dao.shm(shm_path['HW']['flux'],flux)
 dao.shm(shm_path['HW']['slopes_3'],slopes_3)

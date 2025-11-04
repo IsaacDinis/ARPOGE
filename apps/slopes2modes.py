@@ -21,6 +21,7 @@ mask = fits.getdata(os.path.join(data_dir, "mask.fits"))
 reference_image_normalized = fits.getdata(os.path.join(data_dir, "reference_image_normalized.fits"))
 IM_KL2S = fits.getdata(os.path.join(data_dir, "IM_KL2S.fits"))
 
+
 def compute_pyr_slopes(normalized_pyr_img, normalized_ref_img):
     slopes_image = normalized_pyr_img - normalized_ref_img
     return slopes_image

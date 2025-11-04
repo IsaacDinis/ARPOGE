@@ -42,15 +42,17 @@ sem_nb = config['sem_nb']['rec']
 n_modes = config['common']['n_modes']
 n_voltages = config['common']['n_voltages']
 fs = dao.shm(shm_path['G']['fs']).get_data()[0][0]
+print(fs)
 record_time = dao.shm(shm_path['settings']['record_time']).get_data()[0][0]
-# cblue_shm = dao.shm(shm_path['control']['cblue'])
+cblue_shm = dao.shm(shm_path['HW']['cblue'])
+cred2_shm = dao.shm(shm_path['HW']['cred2'])
 dm_shm = dao.shm(shm_path['HW']['dm'])
 dm0_shm = dao.shm(shm_path['HW']['dm0'])
 dm1_shm = dao.shm(shm_path['HW']['dm1'])
 dm2_shm = dao.shm(shm_path['HW']['dm2'])
 dm3_shm = dao.shm(shm_path['HW']['dm3'])
 pixels_4sided_shm = dao.shm(shm_path['HW']['pixels_4sided'])
-pixels_3sided_shm = dao.shm(shm_path['HW']['pixels_4sided'])
+pixels_3sided_shm = dao.shm(shm_path['HW']['pixels_3sided'])
 
 save_slopes_state_flag = dao.shm(shm_path['settings']['save_slopes_state_flag']).get_data()[0][0] 
 save_pixels_state_flag = dao.shm(shm_path['settings']['save_pixels_state_flag']).get_data()[0][0] 
@@ -104,10 +106,12 @@ match pyramid_select_shm.get_data(check=False)[0][0]:
         results_file.add('pyramid','4 sided')
         modes_in_bis_shm = dao.shm(shm_path['HW']['modes_in_3sided'])
         pixels_shm = pixels_4sided_shm
+        pyramid_select = "4sided"
     case 1:
         results_file.add('pyramid','3 sided')
         modes_in_bis_shm = dao.shm(shm_path['HW']['modes_in_4sided'])
         pixels_shm = pixels_3sided_shm
+        pyramid_select = "3sided"
 
 results_file.add('delay',delay)
 results_file.add('n modes controlled',n_modes_controlled)
@@ -137,15 +141,24 @@ if save_slopes_state_flag:
     slopes_buf = np.zeros((record_its,n_slopes))
 
 if save_pixels_state_flag:
-    n_pixels_3sided =  pixels_4sided_shm.get_data().shape[0]
-    n_pixels_4sided =  pixels_3sided_shm.get_data().shape[0]
-    pixels_3sided_buf = np.zeros((record_its,n_pixels_3sided,n_pixels_3sided))
-    pixels_4sided_buf = np.zeros((record_its,n_pixels_4sided,n_pixels_4sided))
-# cblue_shape = cblue_shm.get_data(check=False).shape
-# cblue_n_frames = 100
-# cblue_count = 0
-# cblue_n_avg = int(np.ceil(record_its/cblue_n_frames)) 
-# cblue_buf = np.zeros((cblue_n_avg,cblue_shape[0],cblue_shape[1]),np.uint32)
+    n_pixels_3sided_x =  pixels_3sided_shm.get_data().shape[0]
+    n_pixels_3sided_y =  pixels_3sided_shm.get_data().shape[1]
+    n_pixels_4sided_x =  pixels_4sided_shm.get_data().shape[0]
+    n_pixels_4sided_y =  pixels_4sided_shm.get_data().shape[1]
+    pixels_3sided_buf = np.zeros((record_its,n_pixels_3sided_x,n_pixels_3sided_y))
+    pixels_4sided_buf = np.zeros((record_its,n_pixels_4sided_x,n_pixels_4sided_y))
+
+cblue_shape = cblue_shm.get_data(check=False).shape
+cblue_n_frames = 100
+cblue_count = 0
+cblue_n_avg = int(np.ceil(record_its/cblue_n_frames)) 
+cblue_buf = np.zeros((cblue_n_avg,cblue_shape[0],cblue_shape[1]),np.uint32)
+
+cred2_shape = cred2_shm.get_data(check=False).shape
+cred2_n_frames = 100
+cred2_count = 0
+cred2_n_avg = int(np.ceil(record_its/cred2_n_frames)) 
+cred2_buf = np.zeros((cred2_n_avg,cred2_shape[0],cred2_shape[1]),np.uint32)
 
 for i in range(record_its):
 
@@ -155,8 +168,13 @@ for i in range(record_its):
     modes_out =  telemetry[1, :]
     modes_in_ts = telemetry_ts[0, :]
     modes_out_ts =  telemetry_ts[1, :]
-    hrtc_counter_buf[i, :] = telemetry_shm.get_meta_data()['cnt2']
+    if pyramid_select == "4sided":
+        hrtc_counter_buf[i, :] = telemetry_shm.get_counter()
+    else:
+        hrtc_counter_buf[i, :] = telemetry_shm.get_meta_data()['cnt2']
+
     pyramid_counter_buf[i, :] = pixels_shm.get_counter()
+    
     voltages = dm_shm.get_data(check=False).squeeze()
     # pyr_flux = norm_flux_pyr_img_shm.get_data(check=False, semNb=sem_nb).squeeze()
     # strehl = strehl_ratio_shm.get_data(check=False, semNb=sem_nb).squeeze()
@@ -188,13 +206,18 @@ for i in range(record_its):
     # pyr_flux_buf[i, :] = pyr_flux
     # strehl_buf[i, :] = strehl
 
-    # cblue_buf[cblue_count,:,:] += cblue_shm.get_data(check=False).astype(np.uint32)
+    cblue_buf[cblue_count,:,:] += cblue_shm.get_data(check=False).astype(np.uint32)
     
-    # if (i+1) % cblue_n_frames == 0:
-    #     cblue_count += 1
+    if (i+1) % cblue_n_frames == 0:
+        cblue_count += 1
 
+    cred2_buf[cred2_count,:,:] += cred2_shm.get_data(check=False).astype(np.uint32)
+    
+    if (i+1) % cred2_n_frames == 0:
+        cred2_count += 1
 
-# cblue_buf = cblue_buf/cblue_n_avg
+cblue_buf = cblue_buf/cblue_n_avg
+cred2_buf = cred2_buf/cred2_n_avg
 
 rms = np.mean(np.sum(np.square(modes_in_buf),axis=1))
 results_file.add('rms',rms)
@@ -222,7 +245,8 @@ if save_pixels_state_flag:
     fits.writeto(os.path.join(full_path, "pixels_4sided.fits"), pixels_4sided_buf, overwrite = True)
     fits.writeto(os.path.join(full_path, "pixels_3sided.fits"), pixels_3sided_buf, overwrite = True)
 # fits.writeto(os.path.join(full_path, "strehl.fits"), strehl_buf, overwrite = True)
-# fits.writeto(os.path.join(full_path, "cblue.fits"), cblue_buf, overwrite = True)
+fits.writeto(os.path.join(full_path, "cblue.fits"), cblue_buf, overwrite = True)
+fits.writeto(os.path.join(full_path, "cred2.fits"), cred2_buf, overwrite = True)
 results_file.save()
 
-print('print record done')
+print('record done')

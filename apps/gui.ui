@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1514</width>
-    <height>1378</height>
+    <width>1525</width>
+    <height>1110</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -20,7 +20,7 @@
       <x>20</x>
       <y>10</y>
       <width>1481</width>
-      <height>1311</height>
+      <height>1051</height>
      </rect>
     </property>
     <property name="currentIndex">
@@ -144,6 +144,9 @@
         <height>27</height>
        </rect>
       </property>
+      <property name="maximum">
+       <double>9999.989999999999782</double>
+      </property>
       <property name="value">
        <double>5.000000000000000</double>
       </property>
@@ -213,18 +216,18 @@
      <widget class="QWidget" name="time_widget" native="true">
       <property name="geometry">
        <rect>
-        <x>20</x>
-        <y>70</y>
+        <x>0</x>
+        <y>40</y>
         <width>831</width>
-        <height>311</height>
+        <height>281</height>
        </rect>
       </property>
      </widget>
      <widget class="QPushButton" name="reset_time_view_button">
       <property name="geometry">
        <rect>
-        <x>360</x>
-        <y>400</y>
+        <x>350</x>
+        <y>320</y>
         <width>89</width>
         <height>25</height>
        </rect>
@@ -236,8 +239,8 @@
      <widget class="QLabel" name="label_26">
       <property name="geometry">
        <rect>
-        <x>130</x>
-        <y>20</y>
+        <x>120</x>
+        <y>10</y>
         <width>131</width>
         <height>20</height>
        </rect>
@@ -249,9 +252,9 @@
      <widget class="QWidget" name="fft_widget" native="true">
       <property name="geometry">
        <rect>
-        <x>30</x>
-        <y>460</y>
-        <width>821</width>
+        <x>10</x>
+        <y>350</y>
+        <width>671</width>
         <height>311</height>
        </rect>
       </property>
@@ -259,8 +262,8 @@
      <widget class="QSpinBox" name="mode_select_spinbox">
       <property name="geometry">
        <rect>
-        <x>60</x>
-        <y>20</y>
+        <x>50</x>
+        <y>10</y>
         <width>52</width>
         <height>27</height>
        </rect>
@@ -476,8 +479,8 @@
      <widget class="QCheckBox" name="square_res_checkbox">
       <property name="geometry">
        <rect>
-        <x>330</x>
-        <y>1210</y>
+        <x>360</x>
+        <y>930</y>
         <width>121</width>
         <height>24</height>
        </rect>
@@ -489,18 +492,18 @@
      <widget class="QWidget" name="modes_amp_widget" native="true">
       <property name="geometry">
        <rect>
-        <x>40</x>
-        <y>840</y>
+        <x>30</x>
+        <y>690</y>
         <width>631</width>
-        <height>341</height>
+        <height>231</height>
        </rect>
       </property>
      </widget>
      <widget class="QPushButton" name="reset_modes_amp_view_button">
       <property name="geometry">
        <rect>
-        <x>210</x>
-        <y>1210</y>
+        <x>260</x>
+        <y>930</y>
         <width>89</width>
         <height>25</height>
        </rect>
@@ -667,8 +670,8 @@
      <widget class="QCheckBox" name="autoscale_pyr_3_checkbox">
       <property name="geometry">
        <rect>
-        <x>870</x>
-        <y>1220</y>
+        <x>840</x>
+        <y>920</y>
         <width>121</width>
         <height>24</height>
        </rect>
@@ -684,7 +687,7 @@
       <property name="geometry">
        <rect>
         <x>690</x>
-        <y>840</y>
+        <y>580</y>
         <width>361</width>
         <height>331</height>
        </rect>
@@ -693,8 +696,8 @@
      <widget class="QPushButton" name="reset_fft_view_button">
       <property name="geometry">
        <rect>
-        <x>350</x>
-        <y>780</y>
+        <x>310</x>
+        <y>660</y>
         <width>89</width>
         <height>25</height>
        </rect>
@@ -706,9 +709,9 @@
      <widget class="QLabel" name="label_24">
       <property name="geometry">
        <rect>
-        <x>1240</x>
-        <y>800</y>
-        <width>101</width>
+        <x>1190</x>
+        <y>550</y>
+        <width>91</width>
         <height>20</height>
        </rect>
       </property>
@@ -719,8 +722,8 @@
      <widget class="QWidget" name="pyr_3_masked_widget" native="true">
       <property name="geometry">
        <rect>
-        <x>1080</x>
-        <y>840</y>
+        <x>1060</x>
+        <y>580</y>
         <width>371</width>
         <height>331</height>
        </rect>
@@ -729,9 +732,9 @@
      <widget class="QLabel" name="label_22">
       <property name="geometry">
        <rect>
-        <x>850</x>
-        <y>800</y>
-        <width>61</width>
+        <x>860</x>
+        <y>550</y>
+        <width>41</width>
         <height>20</height>
        </rect>
       </property>
@@ -742,8 +745,8 @@
      <widget class="QCheckBox" name="autoscale_pyr_3_masked_checkbox">
       <property name="geometry">
        <rect>
-        <x>1250</x>
-        <y>1220</y>
+        <x>1220</x>
+        <y>920</y>
         <width>121</width>
         <height>24</height>
        </rect>
@@ -834,7 +837,7 @@
        <rect>
         <x>900</x>
         <y>270</y>
-        <width>41</width>
+        <width>21</width>
         <height>31</height>
        </rect>
       </property>
@@ -853,6 +856,41 @@
       </property>
       <property name="text">
        <string>delay</string>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="remove_bias_checkbox">
+      <property name="geometry">
+       <rect>
+        <x>910</x>
+        <y>550</y>
+        <width>121</width>
+        <height>24</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>remove bias</string>
+      </property>
+      <property name="checked">
+       <bool>true</bool>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="remove_ref_checkbox">
+      <property name="enabled">
+       <bool>true</bool>
+      </property>
+      <property name="geometry">
+       <rect>
+        <x>1290</x>
+        <y>550</y>
+        <width>121</width>
+        <height>24</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>remove ref</string>
+      </property>
+      <property name="checked">
+       <bool>false</bool>
       </property>
      </widget>
     </widget>
@@ -1082,8 +1120,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1514</width>
-     <height>24</height>
+     <width>1525</width>
+     <height>20</height>
     </rect>
    </property>
   </widget>

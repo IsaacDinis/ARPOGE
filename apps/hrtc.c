@@ -11,7 +11,7 @@
 #include "utils.h"
 
 #define TIME_VERBOSE 1
-#define PRINT_RATE 5
+#define PRINT_RATE 1
 #define MAX_FS 1000
 // ---------- Structures ----------
 
@@ -293,8 +293,8 @@ int real_time_loop(){
       
       for (uint32_t i = 0; i < (uint32_t) config.n_modes; i++) {
         modes_out[i] = 0;
-        // if(closed_loop_state_flag_shm->array.UI32[0]&&i<n_modes_controlled_shm->array.UI32[0]){
-        if(closed_loop_state_flag_shm->array.UI32[0]&&i<150){ // TODO
+        if(closed_loop_state_flag_shm->array.UI32[0]&&i<n_modes_controlled_shm->array.UI32[0]){
+        // if(closed_loop_state_flag_shm->array.UI32[0]&&i<150){ // TODO
           for (int j = 0; j < 2 * config.max_order + 1; j++) {
             modes_out[i] += state_mat[j * config.n_modes + i] * K_mat_shm->array.F[j * config.n_modes + i];
           }

@@ -53,3 +53,14 @@ pix2modes_cuda = bld.program(
 	cflags = my_cflags + ['-Wall', '-Wextra', '-pipe', '-fdiagnostics-color=auto'],	
     install_path =bin_dir
 )
+
+remove_cred3_bias = bld.program(
+	source = 'remove_cred3_bias.c',
+	target = 'remove_cred3_bias',
+	includes = '../include '+os.getenv('DAOROOT')+'/include/',
+	linkflags = my_link_flags,
+	ldflags = ['-ldao' , '-lpthread', '-lm', '-lcfitsio'] + my_ld_flags,
+	use = ['utils','toml'],
+	cflags = my_cflags + ['-Wall', '-Wextra', '-pipe', '-fdiagnostics-color=auto'],	
+    install_path =bin_dir
+)
