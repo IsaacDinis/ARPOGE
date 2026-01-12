@@ -11,7 +11,7 @@
 #include "utils.h"
 
 #define TIME_VERBOSE 1
-#define PRINT_RATE 5
+#define PRINT_RATE 1
 #define MAX_FS 1000
 // ---------- Structures ----------
 
@@ -150,7 +150,7 @@ void free_shm_path() {
 // int load_K_mat(float* K_mat){
 int load_K_mat(IMAGE *K_mat_shm, uint32_t controller_select){
   
-  enum{INTEGRATOR,OMGI,DD};
+  enum{INTEGRATOR,DD,OMGI};
   switch (controller_select) {
     case INTEGRATOR:
       daoShmShm2Img(shm_path.K_mat_int, K_mat_shm);
@@ -293,8 +293,8 @@ int real_time_loop(){
       
       for (uint32_t i = 0; i < (uint32_t) config.n_modes; i++) {
         modes_out[i] = 0;
-        // if(closed_loop_state_flag_shm->array.UI32[0]&&i<n_modes_controlled_shm->array.UI32[0]){
-        if(closed_loop_state_flag_shm->array.UI32[0]&&i<150){ // TODO
+        if(closed_loop_state_flag_shm->array.UI32[0]&&i<n_modes_controlled_shm->array.UI32[0]){
+        // if(closed_loop_state_flag_shm->array.UI32[0]&&i<150){ // TODO
           for (int j = 0; j < 2 * config.max_order + 1; j++) {
             modes_out[i] += state_mat[j * config.n_modes + i] * K_mat_shm->array.F[j * config.n_modes + i];
           }
@@ -371,6 +371,7 @@ int real_time_loop(){
           printf("Mean Computation time = %.2f ms\n", (computation_time / counter) * 1e3);
           printf("Max loop time = %.2f ms\n", max_val * 1e3);
           printf("Frames missed = %d\n\n", frame_missed);
+          
           // Reset counters
           computation_time  = wfs_time = 0;
           counter = -1;

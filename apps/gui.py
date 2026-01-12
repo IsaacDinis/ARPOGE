@@ -15,6 +15,7 @@ import toml
 from astropy.io import fits
 import subprocess
 import os
+import importlib
 import signal
 import control as ct
 import ctypes
@@ -337,22 +338,36 @@ class MainWindow(QMainWindow):
         self.view_update_timer.timeout.connect(self.update_fft_wiew)
         self.view_update_timer.timeout.connect(self.update_time_wiew)
         self.view_update_timer.timeout.connect(self.update_modes_amp_wiew)
-        self.view_update_timer.start(100) # ms 
+        self.optimization_dd_timer = QTimer()
+        self.optimization_dd_timer.timeout.connect(self.optimization_dd_process.start_process)
+        self.view_update_timer.start(200) # ms 
 
         print("init done")
     def init_spinboxes(self):
         self.gain_spinbox.valueChanged.connect(self.gain_changed)
         self.gain_changed(self.gain_spinbox.value())
 
+        self.fs_spinbox.valueChanged.connect(self.fs_changed)
+        self.fs_changed(self.fs_spinbox.value())
+
+        self.order_dd_spinbox.valueChanged.connect(self.order_dd_changed)
+        self.order_dd_changed(self.order_dd_spinbox.value())
+
+        self.delay_spinbox.valueChanged.connect(self.delay_changed)
+        self.delay_changed(self.delay_spinbox.value())
 
         self.n_modes_spinbox.valueChanged.connect(self.n_modes_changed)
         self.n_modes_changed(self.n_modes_spinbox.value())
+
+        self.n_modes_dd_spinbox.valueChanged.connect(self.n_modes_dd_changed)
+        self.n_modes_dd_changed(self.n_modes_dd_spinbox.value())
 
         self.record_time_spinbox.valueChanged.connect(self.record_time_changed)
         self.record_time_changed(self.record_time_spinbox.value())
         
         self.closed_loop_checkbox.stateChanged.connect(self.closed_loop_check)
         self.save_slopes_checkbox.stateChanged.connect(self.save_slopes_check)
+        self.save_pixels_checkbox.stateChanged.connect(self.save_pixels_check)
         self.reset_state_mat_button.clicked.connect(self.reset_state_mat)
 
         self.save_flat_button.clicked.connect(self.save_flat)
@@ -361,6 +376,7 @@ class MainWindow(QMainWindow):
         self.save_latency_button.clicked.connect(self.save_latency)
         self.load_latency_button.clicked.connect(self.load_latency)
         self.nico_button.clicked.connect(self.start_record_and_close_loop)
+        self.reset_dd_controller_button.clicked.connect(self.reset_dd_controller)
 
         self.controller_select_dial.valueChanged.connect(self.update_controller_select)
         self.update_controller_select(self.controller_select_dial.value())
@@ -374,7 +390,7 @@ class MainWindow(QMainWindow):
         self.pol_reconstructor_process = ProcessManager("pol_reconstructor.py",self.start_pol_reconstructor_button, self.stop_pol_reconstructor_button, self.pol_reconstructor_output)
         self.freq_mag_estimator_process = ProcessManager("freq_mag_estimator.py",self.start_freq_mag_estimator_button, self.stop_freq_mag_estimator_button, self.freq_mag_estimator_output)
         self.identify_latency_frequency_process = ProcessManager("identify_latency_frequency.py",self.start_latency_identification_button, None, self.latency_identification_output)
-
+        self.optimization_dd_process = ProcessManager("optimizer_dd.py",self.start_optimization_dd_button, None, self.optimization_dd_output)
     def init_shm(self):
 
         
@@ -384,7 +400,9 @@ class MainWindow(QMainWindow):
             shm_path = toml.load(f)
 
         self.pyr_3_shm                     = dao.shm(shm_path['HW']['pixels_3sided'])             
-        self.pyr_3_masked_shm                     = dao.shm(shm_path['HW']['pixels_masked_3sided'])
+        self.pyr_3_masked_shm              = dao.shm(shm_path['HW']['pixels_masked_3sided'])
+        self.pyr_3_wo_bias_shm             = dao.shm(shm_path['HW']['pixels_wo_bias_3sided'])             
+        self.pyr_3_masked_wo_ref_shm       = dao.shm(shm_path['HW']['pixels_masked_wo_ref_3sided'])
 
 
         self.modes_in_fft_shm = dao.shm(shm_path['frequency_domain_buff']['modes_in_fft'])
@@ -399,6 +417,7 @@ class MainWindow(QMainWindow):
 
         self.closed_loop_state_flag_shm = dao.shm(shm_path['settings']['closed_loop_state_flag']) 
         self.save_slopes_state_flag_shm = dao.shm(shm_path['settings']['save_slopes_state_flag']) 
+        self.save_pixels_state_flag_shm = dao.shm(shm_path['settings']['save_pixels_state_flag']) 
         self.n_modes_dd_shm = dao.shm(shm_path['settings']['n_modes_dd']) 
         self.n_modes_controlled_shm = dao.shm(shm_path['settings']['n_modes_controlled'])
         self.dd_update_rate_shm = dao.shm(shm_path['settings']['dd_update_rate'])
@@ -473,8 +492,16 @@ class MainWindow(QMainWindow):
             setattr(self, attr_name, view)
 
     def update_images(self):
-        self.pyr_3_view.setImage(self.pyr_3_shm.get_data(check=False,semNb=self.sem_nb), autoLevels=(self.autoscale_pyr_3_checkbox.checkState()==Qt.CheckState.Checked),autoRange=False)
-        self.pyr_3_masked_view.setImage(self.pyr_3_masked_shm.get_data(check=False,semNb=self.sem_nb), autoLevels=(self.autoscale_pyr_3_masked_checkbox.checkState()==Qt.CheckState.Checked),autoRange=False)
+        if self.remove_bias_checkbox.checkState()==Qt.CheckState.Checked:
+            self.pyr_3_view.setImage(self.pyr_3_wo_bias_shm.get_data(check=False,semNb=self.sem_nb), autoLevels=(self.autoscale_pyr_3_checkbox.checkState()==Qt.CheckState.Checked),autoRange=False)
+        else:
+            self.pyr_3_view.setImage(self.pyr_3_shm.get_data(check=False,semNb=self.sem_nb), autoLevels=(self.autoscale_pyr_3_checkbox.checkState()==Qt.CheckState.Checked),autoRange=False)
+        
+        if self.remove_ref_checkbox.checkState()==Qt.CheckState.Checked:
+            self.pyr_3_masked_view.setImage(self.pyr_3_masked_wo_ref_shm.get_data(check=False,semNb=self.sem_nb), autoLevels=(self.autoscale_pyr_3_masked_checkbox.checkState()==Qt.CheckState.Checked),autoRange=False)
+        else:
+            self.pyr_3_masked_view.setImage(self.pyr_3_masked_shm.get_data(check=False,semNb=self.sem_nb), autoLevels=(self.autoscale_pyr_3_masked_checkbox.checkState()==Qt.CheckState.Checked),autoRange=False)
+
   
 
     def update_fft_wiew(self):
@@ -540,12 +567,27 @@ class MainWindow(QMainWindow):
         elif state == Qt.CheckState.Unchecked.value:
             self.save_slopes_state_flag_shm.set_data(np.array([[0]],np.uint32))
 
+    def save_pixels_check(self,state):
+        if state == Qt.CheckState.Checked.value:
+            self.save_pixels_state_flag_shm.set_data(np.array([[1]],np.uint32))
+        elif state == Qt.CheckState.Unchecked.value:
+            self.save_pixels_state_flag_shm.set_data(np.array([[0]],np.uint32))
+
     def order_dd_changed(self,value):
         self.dd_order_shm.set_data(np.array([[value]],np.uint32))
         self.reset_dd_controller()
 
+    def fs_changed(self,value):
+        self.fs_shm.set_data(np.array([[value]],np.float32))
+
+    def delay_changed(self,value):
+        self.delay_shm.set_data(np.array([[value]],np.float32))
+
     def n_modes_changed(self,value):
         self.n_modes_controlled_shm.set_data(np.array([[value]],np.uint32))
+
+    def n_modes_dd_changed(self,value):
+        self.n_modes_dd_shm.set_data(np.array([[value]],np.uint32))
 
     def reset_state_mat(self):
         self.reset_flag_shm.set_data(np.ones((1,1),dtype = np.uint32))
@@ -562,7 +604,9 @@ class MainWindow(QMainWindow):
             print("File: dm_flat_papy.fits not found")
         calib_flat = 0.
         #flat = self.dm_shm.get_data(check=False, semNb=self.sem_nb)
-        flat = (np.mean([self.dm_shm.get_data(check=False, semNb=self.sem_nb) for i in range(10)], axis=0))
+        flat = (np.mean([self.dm_shm.get_data(check=True, semNb=self.sem_nb) for i in range(10)], axis=0))
+        flat_prev = self.flat_dm_shm.get_data(check=False)
+        flat += flat_prev
         fits.writeto(os.path.join(data_dir, "flat_cl.fits"),flat, overwrite = True)
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         fits.writeto(os.path.join(data_dir, f'flat_{timestamp}.fits'),flat, overwrite = True)
@@ -618,6 +662,7 @@ class MainWindow(QMainWindow):
         
     def update_controller_select(self, value):
         self.controller_select_shm.set_data(np.array([[value]],np.uint32))
+        self.K_mat_flag_shm.set_data(np.ones((1,1),dtype = np.uint32))
 
     def reset_dd_controller(self):
         K_mat_int = self.K_mat_int_shm.get_data(check=False, semNb=self.sem_nb)
@@ -636,11 +681,11 @@ class MainWindow(QMainWindow):
         else:
             self.optimization_dd_timer.stop()
 
-    def update_rate_omgi_changed(self,value):
-        if value:
-            self.optimization_omgi_timer.start(int(value*1e3))
-        else:
-            self.optimization_omgi_timer.stop()  
+    # def update_rate_omgi_changed(self,value):
+    #     if value:
+    #         self.optimization_omgi_timer.start(int(value*1e3))
+    #     else:
+    #         self.optimization_omgi_timer.stop()  
     def n_fft_changed(self,value):
         self.n_fft_shm.set_data(np.array([[value]],np.uint32))
 
@@ -649,11 +694,14 @@ class MainWindow(QMainWindow):
 
     def update_pyramid_select(self, value):
         self.pyramid_select_shm.set_data(np.array([[value]],np.uint32))
+        self.pyramid_flag_shm.set_data(np.ones((1,1),np.uint32))
 
     def closeEvent(self, event):
         self.record_process.stop_process()
         self.pol_reconstructor_process.stop_process()
         self.freq_mag_estimator_process.stop_process()
+        self.optimization_dd_process.stop_process()
+        self.optimization_dd_timer.stop()
         self.view_update_timer.stop()
         self.identify_latency_frequency_process.stop_process()
 
@@ -671,6 +719,7 @@ if __name__ == "__main__":
 
     # Launch the GUI
     app = QApplication(sys.argv)
+    signal = importlib.import_module("signal")
     signal.signal(signal.SIGINT, handle_sigint)
     window = MainWindow()
     window.show()

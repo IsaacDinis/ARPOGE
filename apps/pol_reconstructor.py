@@ -17,6 +17,7 @@ sem_nb = config['sem_nb']['pol']
 
 
 delay = dao.shm(shm_path['G']['delay']).get_data()[0][0]
+print(delay)
 # delay = 2
 
 update_rate = config['visualizer']['update_rate']

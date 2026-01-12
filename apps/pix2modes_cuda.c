@@ -22,16 +22,18 @@ struct {
     char *modes;
     char *pixels;
     char *pixels_masked;
+    char *pixels_masked_wo_ref;
+    char *pixels_wo_bias;
     char *mask;
     char *bias_image;
     char *ref_img_norm;
     char *S2M;
     char *flux;
     char *slopes_3;
+    char *cred3_frame_cnt;
 } shm_path;
 
 struct {
-    int64_t n_pixels;
     int64_t sem_nb;
 
 } config;
@@ -95,15 +97,18 @@ int load_shm_path() {
         toml_rtos(toml_raw_in(HW, "modes_in_custom"), &shm_path.modes);  
         toml_rtos(toml_raw_in(HW, "pixels_3sided"),   &shm_path.pixels);
         toml_rtos(toml_raw_in(HW, "pixels_masked_3sided"),   &shm_path.pixels_masked);
+        toml_rtos(toml_raw_in(HW, "pixels_masked_wo_ref_3sided"),   &shm_path.pixels_masked_wo_ref);
+        toml_rtos(toml_raw_in(HW, "pixels_wo_bias_3sided"),   &shm_path.pixels_wo_bias);
         toml_rtos(toml_raw_in(HW, "flux"),   &shm_path.flux);
         toml_rtos(toml_raw_in(HW, "slopes_3"),   &shm_path.slopes_3);
+        toml_rtos(toml_raw_in(HW, "cred3_frame_counter"),   &shm_path.cred3_frame_cnt);
     }
     toml_table_t *calibration = toml_table_in(root, "calibration");
     if (calibration) {
         toml_rtos(toml_raw_in(calibration, "mask"),         &shm_path.mask);  
-        toml_rtos(toml_raw_in(calibration, "bias_image"),   &shm_path.bias_image);
         toml_rtos(toml_raw_in(calibration, "ref_img_norm"), &shm_path.ref_img_norm);
         toml_rtos(toml_raw_in(calibration, "S2M"),          &shm_path.S2M);
+        toml_rtos(toml_raw_in(calibration, "bias_image"),   &shm_path.bias_image);
     }
     toml_free(root);
     return 0;
@@ -114,9 +119,7 @@ int load_config() {
     toml_table_t *root = load_toml("../config/config.toml", errbuf, sizeof(errbuf));
     if (!root) return 1;
 
-    toml_table_t *common    = toml_table_in(root, "common");
     toml_table_t *sem_nb    = toml_table_in(root, "sem_nb");
-    if (common) toml_rtoi(toml_raw_in(common, "n_pixels"),  &config.n_pixels);
     if (sem_nb)    toml_rtoi(toml_raw_in(sem_nb, "pix2modes"),          &config.sem_nb);
 
     toml_free(root);
@@ -127,12 +130,15 @@ void free_shm_path() {
     free(shm_path.modes);
     free(shm_path.pixels);
     free(shm_path.mask);
-    free(shm_path.bias_image);
     free(shm_path.ref_img_norm);
     free(shm_path.S2M);
     free(shm_path.pixels_masked);
+    free(shm_path.pixels_masked_wo_ref);
+    free(shm_path.pixels_wo_bias);
     free(shm_path.flux);
+    free(shm_path.cred3_frame_cnt);
     free(shm_path.slopes_3);
+    free(shm_path.bias_image);
 }
 
 int real_time_loop(){
@@ -140,28 +146,35 @@ int real_time_loop(){
   struct timespec timeout;
   IMAGE *pixels_shm = (IMAGE*) malloc(sizeof(IMAGE));
   IMAGE *pixels_masked_shm = (IMAGE*) malloc(sizeof(IMAGE));
+  IMAGE *pixels_masked_wo_ref_shm = (IMAGE*) malloc(sizeof(IMAGE));
+  IMAGE *pixels_wo_bias_shm = (IMAGE*) malloc(sizeof(IMAGE));
   IMAGE *flux_shm = (IMAGE*) malloc(sizeof(IMAGE));
+  IMAGE *cred3_frame_cnt_shm = (IMAGE*) malloc(sizeof(IMAGE));
   IMAGE *modes_shm = (IMAGE*) malloc(sizeof(IMAGE));
   IMAGE *mask_shm = (IMAGE*) malloc(sizeof(IMAGE));
-  IMAGE *bias_image_shm = (IMAGE*) malloc(sizeof(IMAGE));
   IMAGE *ref_img_norm_shm = (IMAGE*) malloc(sizeof(IMAGE));
   IMAGE *S2M_shm = (IMAGE*) malloc(sizeof(IMAGE));
   IMAGE *slopes_3_shm = (IMAGE*) malloc(sizeof(IMAGE));
+  IMAGE *bias_image_shm = (IMAGE*) malloc(sizeof(IMAGE));
   daoShmShm2Img(shm_path.modes, modes_shm);
   daoShmShm2Img(shm_path.pixels, pixels_shm);
   daoShmShm2Img(shm_path.pixels_masked, pixels_masked_shm);
+  daoShmShm2Img(shm_path.pixels_masked_wo_ref, pixels_masked_wo_ref_shm);
+  daoShmShm2Img(shm_path.pixels_wo_bias, pixels_wo_bias_shm);
   daoShmShm2Img(shm_path.flux, flux_shm);
+  daoShmShm2Img(shm_path.cred3_frame_cnt, cred3_frame_cnt_shm);
   daoShmShm2Img(shm_path.mask, mask_shm);
-  daoShmShm2Img(shm_path.bias_image, bias_image_shm);
   daoShmShm2Img(shm_path.ref_img_norm, ref_img_norm_shm);
   daoShmShm2Img(shm_path.S2M, S2M_shm);
   daoShmShm2Img(shm_path.slopes_3, slopes_3_shm);
-
-  uint32_t n_pix = pixels_shm->md[0].size[0] ;
+  daoShmShm2Img(shm_path.bias_image, bias_image_shm);
+  uint32_t n_pix_x = pixels_shm->md[0].size[1] ;
+  uint32_t n_pix_y = pixels_shm->md[0].size[0] ;
   uint32_t n_slopes = S2M_shm->md[0].size[1];
   uint32_t n_modes = S2M_shm->md[0].size[0];
   float* slopes = malloc(n_slopes * sizeof(float));
   float norm_flux = 0.0f;
+  uint64_t frame_cnt = 0;
 
   
   // Device pointers
@@ -202,38 +215,49 @@ int real_time_loop(){
         wfs_time += get_time_seconds() - start_wfs;
         start_compute = get_time_seconds();
       #endif
-      modes_shm->md[0].cnt2 = pixels_shm->md[0].cnt2;
-      pixels_masked_shm->md[0].cnt2 = pixels_shm->md[0].cnt2;
-      flux_shm->md[0].cnt2 = pixels_shm->md[0].cnt2;
-      slopes_3_shm->md[0].cnt2 = pixels_shm->md[0].cnt2;
+      frame_cnt =  pixels_shm->md[0].cnt0; 
+      modes_shm->md[0].cnt2 = frame_cnt;
+      pixels_masked_shm->md[0].cnt2 = frame_cnt;
+      pixels_masked_wo_ref_shm->md[0].cnt2 = frame_cnt;
+      pixels_wo_bias_shm->md[0].cnt2 = frame_cnt;
+      flux_shm->md[0].cnt2 = frame_cnt;
+      cred3_frame_cnt_shm->md[0].cnt2 = frame_cnt;
+      slopes_3_shm->md[0].cnt2 = frame_cnt;
       norm_flux = 0.0f;
-      for (uint32_t i = 0; i < n_pix; i++) {
-        for (uint32_t j = 0; j < n_pix; j++) {
-          uint32_t idx = i * n_pix + j;
-          float corrected = (float)pixels_shm->array.UI16[idx] - (float)bias_image_shm->array.UI16[idx];
-          float masked = corrected * (float)mask_shm->array.UI16[idx];
+      cred3_frame_cnt_shm->array.UI16[0] = (uint64_t) pixels_shm->array.UI16[0]; // first pixel is the counter; 
+      
+      daoShmImagePart2ShmFinalize(cred3_frame_cnt_shm);
+      for (uint32_t i = 0; i < n_pix_x; i++) {
+        for (uint32_t j = 0; j < n_pix_y; j++) {
+          uint32_t idx = i * n_pix_y + j;
+          if (idx) pixels_wo_bias_shm->array.F[idx] = (float)pixels_shm->array.UI16[idx] - bias_image_shm->array.F[idx];
+          else pixels_wo_bias_shm->array.F[idx] = 0; // set first pixel to 0 due to pixel counter
+          float masked = pixels_wo_bias_shm->array.F[idx] * (float)mask_shm->array.UI16[idx];
+          // float masked = (float)mask_shm->array.UI16[idx];
+
           pixels_masked_shm->array.F[idx] = masked;
           // printf("tip = %d\n\n", pixels_shm->array.UI16[idx]);
           norm_flux += (float)masked;
         }
       }
       daoShmImagePart2ShmFinalize(pixels_masked_shm);
+      daoShmImagePart2ShmFinalize(pixels_wo_bias_shm);
+      
       norm_flux = fabsf(norm_flux);
       flux_shm->array.F[0] = norm_flux;
       daoShmImagePart2ShmFinalize(flux_shm);
       
       // Pass 2: fill slopes directly
       uint32_t idx_slopes = 0;
-      for (uint32_t i = 0; i < n_pix; i++) {
-        for (uint32_t j = 0; j < n_pix; j++) {
-          uint32_t idx = i * n_pix + j;
+      for (uint32_t i = 0; i < n_pix_x; i++) {
+        for (uint32_t j = 0; j < n_pix_y; j++) {
+          uint32_t idx = i * n_pix_y + j;
           if (mask_shm->array.UI16[idx] > 0) {
             float normalized = pixels_masked_shm->array.F[idx] / norm_flux;
-            float slope_val = normalized - ref_img_norm_shm->array.F[idx];
-
+            pixels_masked_wo_ref_shm->array.F[idx] = normalized - ref_img_norm_shm->array.F[idx];
             if (idx_slopes < n_slopes) {
               // slopes[idx_slopes++] = slope_val;
-              slopes_3_shm->array.F[idx_slopes++] = slope_val;
+              slopes_3_shm->array.F[idx_slopes++] = pixels_masked_wo_ref_shm->array.F[idx];
             }
           }
         }
@@ -256,6 +280,7 @@ int real_time_loop(){
 
       daoShmImagePart2ShmFinalize(modes_shm);
       daoShmImagePart2ShmFinalize(slopes_3_shm);
+      daoShmImagePart2ShmFinalize(pixels_masked_wo_ref_shm);
       #if TIME_VERBOSE
         computation_time += get_time_seconds() - start_compute;
       #endif
@@ -308,16 +333,19 @@ int real_time_loop(){
   // Cleanup
   free(slopes);
   free(pixels_masked_shm);
+  free(pixels_masked_wo_ref_shm);
+  free(pixels_wo_bias_shm);
   free(flux_shm);
+  free(cred3_frame_cnt_shm);
   free(pixels_shm);
   free(modes_shm);
   free(mask_shm);
-  free(bias_image_shm);
   free(ref_img_norm_shm);
   free(S2M_shm);
   free(slopes_3_shm);
   cublasDestroy(handle);
   cudaFree(d_S2M);
+  free(bias_image_shm);
   cudaFree(d_slopes);
   cudaFree(d_modes);
   return 0;

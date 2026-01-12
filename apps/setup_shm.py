@@ -49,6 +49,7 @@ t = t[:,np.newaxis]
 # loop variables
 pyr_3_img = dao.shm(shm_path['HW']['pixels_3sided']).get_data(check=False)
 pyr_3_img_masked = np.zeros_like(pyr_3_img,np.float32)
+pyr_3_img_wo_bias = np.zeros_like(pyr_3_img,np.float32)
 flux = np.zeros((1,1),dtype = np.float32)
 
 
@@ -92,7 +93,7 @@ flat = np.zeros((n_act,1),dtype = np.float32)
 #Load calibratition matrices
 data_dir = os.path.join(this_script_dir, "../data/")
 mask = fits.getdata(os.path.join(data_dir, "mask.fits")).astype(np.uint16)
-bias_image = fits.getdata(os.path.join(data_dir, "bias_image.fits")).astype(np.uint16)
+bias_image = fits.getdata(os.path.join(data_dir, "bias_image.fits")).astype(np.float32)
 ref_img_norm = fits.getdata(os.path.join(data_dir, "reference_image_normalized.fits")).astype(np.float32)
 S2M = fits.getdata(os.path.join(data_dir, "RM_S2KL.fits")).astype(np.float32)
 n_slopes_3 = S2M.shape[1]
@@ -119,6 +120,7 @@ dao.shm(shm_path['G']['latency'],latency)
 
 dao.shm(shm_path['settings']['closed_loop_state_flag'],uint32_0)
 dao.shm(shm_path['settings']['save_slopes_state_flag'],uint32_0)
+dao.shm(shm_path['settings']['save_pixels_state_flag'],uint32_0)
 dao.shm(shm_path['settings']['n_modes_dd'],n_modes_dd)
 dao.shm(shm_path['settings']['n_modes_controlled'],n_modes_controlled)
 
@@ -136,8 +138,11 @@ dao.shm(shm_path['KL_mat']['V2M'],V2M)
 
 dao.shm(shm_path['HW']['modes_in_custom'],modes)
 dao.shm(shm_path['HW']['pixels_masked_3sided'],pyr_3_img_masked)
+dao.shm(shm_path['HW']['pixels_masked_wo_ref_3sided'],pyr_3_img_masked)
+dao.shm(shm_path['HW']['pixels_wo_bias_3sided'],pyr_3_img_wo_bias)
 dao.shm(shm_path['HW']['flux'],flux)
 dao.shm(shm_path['HW']['slopes_3'],slopes_3)
+dao.shm(shm_path['HW']['cred3_frame_counter'],np.zeros((1,1),np.uint16))
 
 dao.shm(shm_path['S']['S_dd'],S_dd)
 dao.shm(shm_path['S']['S_omgi'],S_omgi)
@@ -146,6 +151,7 @@ dao.shm(shm_path['S']['f_opti'],f_opti)
 
 dao.shm(shm_path['telemetry']['telemetry'],telemetry)
 dao.shm(shm_path['telemetry']['telemetry_ts'],telemetry_ts)
+
 
 dao.shm(shm_path['event_flag']['reset_flag'],uint32_0)
 dao.shm(shm_path['event_flag']['K_mat_flag'],uint32_0)
