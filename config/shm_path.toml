@@ -61,9 +61,9 @@ slopes_4sided = '/tmp/papyrus_slopes.im.shm'
 slopes_3sided = '/tmp/papyrus_slopes.im.shm' #TODO change
 modes_in_custom = '/tmp/modes.shm'
 modes_in_3sided = '/tmp/modes.shm'
-#modes_in_4sided = '/tmp/papyrus_modes.im.shm'
 modes_in_4sided = '/tmp/modes.shm'
-dm = '/tmp/dmCmd03.im.shm' 
+
+dm = '/tmp/dmCmd02.im.shm' 
 flat_dm = '/tmp/dmCmd00.im.shm'
 pixels_4sided = '/tmp/ocam2.im.shm'
 pixels_3sided = '/tmp/ocam2.im.shm' #TODO change

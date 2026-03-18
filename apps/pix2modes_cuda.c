@@ -214,11 +214,11 @@ int real_time_loop(){
           float masked = corrected * (float)mask_shm->array.UI16[idx];
           pixels_masked_shm->array.F[idx] = masked;
           // printf("tip = %d\n\n", pixels_shm->array.UI16[idx]);
-          norm_flux += (float)masked;
+          //norm_flux += (float)masked;
         }
       }
       daoShmImagePart2ShmFinalize(pixels_masked_shm);
-      norm_flux = fabsf(norm_flux);
+      //norm_flux = fabsf(norm_flux);
       flux_shm->array.F[0] = norm_flux;
       daoShmImagePart2ShmFinalize(flux_shm);
       
@@ -228,7 +228,7 @@ int real_time_loop(){
         for (uint32_t j = 0; j < n_pix; j++) {
           uint32_t idx = i * n_pix + j;
           if (mask_shm->array.UI16[idx] > 0) {
-            float normalized = pixels_masked_shm->array.F[idx] / norm_flux;
+            float normalized = pixels_masked_shm->array.F[idx]; // / norm_flux;
             float slope_val = normalized - ref_img_norm_shm->array.F[idx];
 
             if (idx_slopes < n_slopes) {
@@ -253,7 +253,9 @@ int real_time_loop(){
 
       // Copy result back
       CHECK_CUDA(cudaMemcpy(modes_shm->array.F, d_modes, n_modes * sizeof(float), cudaMemcpyDeviceToHost));
-
+      // for (uint32_t k = 0; k < n_modes; k++){
+      //   modes_shm->array.F[k] = modes_shm->array.F[k]*0.5;
+      // }
       daoShmImagePart2ShmFinalize(modes_shm);
       daoShmImagePart2ShmFinalize(slopes_3_shm);
       #if TIME_VERBOSE

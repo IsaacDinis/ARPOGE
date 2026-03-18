@@ -337,6 +337,8 @@ class MainWindow(QMainWindow):
         self.view_update_timer.timeout.connect(self.update_fft_wiew)
         self.view_update_timer.timeout.connect(self.update_time_wiew)
         self.view_update_timer.timeout.connect(self.update_modes_amp_wiew)
+        self.optimization_dd_timer = QTimer()
+        self.optimization_dd_timer.timeout.connect(self.optimization_dd_process.start_process)
         self.view_update_timer.start(100) # ms 
 
         print("init done")
@@ -368,12 +370,20 @@ class MainWindow(QMainWindow):
         self.pyramid_select_dial.valueChanged.connect(self.update_pyramid_select)
         self.update_pyramid_select(self.pyramid_select_dial.value())
 
+        self.reset_dd_controller_button.clicked.connect(self.reset_dd_controller)
+
+        self.order_dd_spinbox.valueChanged.connect(self.order_dd_changed)
+        self.order_dd_changed(self.order_dd_spinbox.value())
+
+        self.optimization_update_rate_dd_spinbox.valueChanged.connect(self.update_rate_dd_changed)
+
     def init_process(self):
 
         self.record_process = ProcessManager("recorder.py",self.start_record_button, None, self.record_output)
         self.pol_reconstructor_process = ProcessManager("pol_reconstructor.py",self.start_pol_reconstructor_button, self.stop_pol_reconstructor_button, self.pol_reconstructor_output)
         self.freq_mag_estimator_process = ProcessManager("freq_mag_estimator.py",self.start_freq_mag_estimator_button, self.stop_freq_mag_estimator_button, self.freq_mag_estimator_output)
         self.identify_latency_frequency_process = ProcessManager("identify_latency_frequency.py",self.start_latency_identification_button, None, self.latency_identification_output)
+        self.optimization_dd_process = ProcessManager("optimizer_dd.py",self.start_optimization_dd_button, None, self.optimization_dd_output)
 
     def init_shm(self):
 
@@ -618,6 +628,7 @@ class MainWindow(QMainWindow):
         
     def update_controller_select(self, value):
         self.controller_select_shm.set_data(np.array([[value]],np.uint32))
+        self.K_mat_flag_shm.set_data(np.ones((1,1),dtype = np.uint32))
 
     def reset_dd_controller(self):
         K_mat_int = self.K_mat_int_shm.get_data(check=False, semNb=self.sem_nb)
@@ -650,13 +661,17 @@ class MainWindow(QMainWindow):
     def update_pyramid_select(self, value):
         self.pyramid_select_shm.set_data(np.array([[value]],np.uint32))
 
+    def n_modes_dd_changed(self,value):
+        self.n_modes_dd_shm.set_data(np.array([[value]],np.uint32))
+
     def closeEvent(self, event):
         self.record_process.stop_process()
         self.pol_reconstructor_process.stop_process()
         self.freq_mag_estimator_process.stop_process()
         self.view_update_timer.stop()
         self.identify_latency_frequency_process.stop_process()
-
+        self.optimization_dd_process.stop_process()
+        self.optimization_dd_timer.stop()
         print("All processes and timers stopped")
         event.accept()
 

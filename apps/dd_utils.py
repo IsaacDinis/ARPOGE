@@ -3,7 +3,6 @@ import control as ct
 import cvxpy as cp
 from matplotlib import pyplot as plt
 
-
 def compute_frequency_response(input_signal, output_signal, sampling_time):
     """Compute the frequency response from input-output data."""
     R_f = np.fft.fft(input_signal)
@@ -26,7 +25,7 @@ def generate_prbs(length, order):
     return np.array(prbs_seq, dtype=np.float64)
 
 def freqresp(sys, w):
-    return ct.frequency_response(sys,w.squeeze()).fresp.squeeze()
+    return ct.frequency_response(sys,w.squeeze()).frdata.squeeze()
 
 def rcone(x,y,z):
     # rcone_con = [
@@ -92,6 +91,11 @@ def get_normal_direction(r):
     n = n*np.sign(np.real(np.conj(n)*r[0:-1]))
     return n
 
+# def get_normal_direction(r):
+#     # r : (N,1) complex CVXPY expression
+#     dr = r[1:] - r[:-1]          # CVXPY-safe diff
+#     n = 1j * dr                  # rotation 90°
+#     return n
 
 def compute_fft_mag_welch(data, fft_size, fs):
     if data.ndim == 1:
@@ -112,6 +116,7 @@ def compute_fft_mag_welch(data, fft_size, fs):
             start_idx = i * (fft_size // 2)  # Overlap by 50%
             data_w = data[start_idx:start_idx + window_size, mode]
             data_w = data_w * window
+            # data_w -= np.mean(data)
             fft_result = np.fft.rfft(data_w)
             psd_w = (np.abs(fft_result)) ** 2 / (fft_size * np.mean(window ** 2))
             psd_w[1:-1] *= 2  # Double non-DC, non-Nyquist components
@@ -120,7 +125,8 @@ def compute_fft_mag_welch(data, fft_size, fs):
     avg_psd = np.mean(spectrogram, axis=1).squeeze()
     magnitude_spectrum = np.sqrt(avg_psd)
     f = np.fft.rfftfreq(fft_size, d=1/fs)
-    # f[-1] *= 0.9999
+    f[-1] *= 0.9999
+    
     return magnitude_spectrum, f, spectrogram
 # def compute_fft_mag_welch(data, fft_size, fs):
 #     if data.ndim == 1:
@@ -310,4 +316,4 @@ if __name__ == '__main__':
     fs = 3000
     z = ct.tf('z')
     sys = 1/z**2
-    plop = ct.frequency_response(sys,np.array([1/fs,2/fs])).fresp.squeeze()
+    plop = ct.frequency_response(sys,np.array([1/fs,2/fs])).frdata.squeeze()

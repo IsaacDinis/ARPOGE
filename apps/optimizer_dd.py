@@ -52,6 +52,7 @@ f = np.linspace(f_p[0],f_p[-1],n_fft)
 f_opti_shm.set_data(f[:,np.newaxis].astype(np.float32)) 
 w = 2*np.pi*f
 # delay += 0.4
+# delay = 2
 G_resp = G_freq_resp(delay, w, fs)*gain_margin
 
 # G_resp = freqresp(G_tf(delay,fs),w)*gain_margin
@@ -82,7 +83,7 @@ pol_fft_avg /= bin_counts
 
 for i in range(n_optmization):
     print(i)
-    K_array[i] = dd4ao.DD4AO(w, G_resp, pol_fft_avg[:,i], order,fs, n_iter = 10000, tol = 1e-2,high_freq_u_lim=True)
+    K_array[i] = dd4ao.DD4AO(w, G_resp, pol_fft_avg[:,i], order,fs, n_iter = 10, tol = 1e-2,high_freq_u_lim=True)
     K_array[i].compute_controller()
     
 for i in range(n_modes):

@@ -71,7 +71,7 @@ dd_update_rate = np.array([[np.inf]],dtype = np.float32)
 gain_margin = np.array([[1.2]],dtype = np.float32)
 wait_time = np.array([[config['calibration']['wait_time']]],dtype = np.float32)
 n_fft_optimizer = np.array([[config['optimizer']['n_fft']]],dtype = np.uint32)
-dd_order = np.array([[20]],dtype = np.uint32)
+dd_order = np.array([[config['optimizer']['max_order']]],dtype = np.uint32)
 
 slopes_4_shm = dao.shm(shm_path['HW']['slopes_4sided'])
 slopes_4 = slopes_4_shm.get_data()
@@ -92,9 +92,9 @@ flat = np.zeros((n_act,1),dtype = np.float32)
 #Load calibratition matrices
 data_dir = os.path.join(this_script_dir, "../data/")
 mask = fits.getdata(os.path.join(data_dir, "mask.fits")).astype(np.uint16)
-bias_image = fits.getdata(os.path.join(data_dir, "bias_image.fits")).astype(np.uint16)
-ref_img_norm = fits.getdata(os.path.join(data_dir, "reference_image_normalized.fits")).astype(np.float32)
-S2M = fits.getdata(os.path.join(data_dir, "RM_S2KL.fits")).astype(np.float32)
+bias = fits.getdata(os.path.join(data_dir, "bias.fits")).astype(np.uint16)
+ref = fits.getdata(os.path.join(data_dir, "ref.fits")).astype(np.float32)
+S2M = fits.getdata(os.path.join(data_dir, "S2M.fits")).astype(np.float32)
 n_slopes_3 = S2M.shape[1]
 slopes_3 = np.zeros((n_slopes_3,1),np.float32)
 
@@ -153,6 +153,6 @@ dao.shm(shm_path['event_flag']['pyramid_flag'],uint32_0)
 
 
 dao.shm(shm_path['calibration']['mask'],mask)
-dao.shm(shm_path['calibration']['bias_image'],bias_image)
-dao.shm(shm_path['calibration']['ref_img_norm'],ref_img_norm)
+dao.shm(shm_path['calibration']['bias_image'],bias)
+dao.shm(shm_path['calibration']['ref_img_norm'],ref)
 dao.shm(shm_path['calibration']['S2M'],S2M)

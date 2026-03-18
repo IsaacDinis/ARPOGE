@@ -1,7 +1,7 @@
 import numpy as np
 import cvxpy as cp
 import control as ct
-import scipy.signal as sp_signal
+from scipy import signal
 from dd_utils import *
 import time
 
@@ -9,7 +9,7 @@ import time
 class DD4AO:
     def __init__(self, w, G_resp, disturbance, order, fs, K0_num=np.array([0.2, 0]),
                  K0_den=np.array([1, -0.99]), Fx=np.array([1]), Fy=np.array([1, -0.99]),
-                 radius=0.99, n_iter=1000, tol=1e-3, high_freq_u_lim=True):
+                 n_iter=10, tol=1e-3, high_freq_u_lim=False):
 
         self.K = None
         self.S_resp = None
@@ -20,7 +20,6 @@ class DD4AO:
         self.pm = None
         self.wcg = None
         self.wcp = None
-
         if w.ndim == 1:
             w = w[:, np.newaxis]
         if G_resp.ndim == 1:
@@ -32,10 +31,12 @@ class DD4AO:
         self.G_resp = G_resp
         self.W_norm = self.w / fs
         self.order = order
-        # bandwidth = fs/2
-        # val = np.interp(bandwidth * 2 * np.pi, w.squeeze(), disturbance.squeeze())
-        # self.disturbance = disturbance/val
-        self.disturbance = disturbance/disturbance[-1,0]  # normalize
+        bandwidth = fs/4
+        val = np.interp(bandwidth * 2 * np.pi, w.squeeze(), disturbance.squeeze())
+        self.disturbance = disturbance/val # normalize
+        # self.disturbance = disturbance/disturbance[-1,0]  # normalize
+        # print(np.sum(disturbance))
+        # self.disturbance = disturbance / np.sum(disturbance)  # normalize
         self.fs = fs
         self.Ts = 1 / fs
         self.Fx = Fx
@@ -43,12 +44,12 @@ class DD4AO:
 
         den = np.pad(K0_den, (0, self.order + 1 - K0_den.shape[0]))
         num = np.pad(K0_num, (0, self.order + 1 - K0_num.shape[0]))
-        num, _ = sp_signal.deconvolve(num, self.Fx)
-        den, _ = sp_signal.deconvolve(den, self.Fy)
+        num, _ = signal.deconvolve(num, self.Fx)
+        den, _ = signal.deconvolve(den, self.Fy)
         self.num = num[:, np.newaxis]
         self.den = den[:, np.newaxis]
 
-        self.radius = radius
+        self.radius = 0.99
 
         self.n_iter = n_iter
         self.tol = tol
@@ -56,7 +57,7 @@ class DD4AO:
 
         self.high_freq_u_lim = high_freq_u_lim
 
-        self.sigm_weight = 10
+        self.sigm_weight = 100
         self.sigm_lambda = 0.05
         sigm = sigmoid_array(w.shape[0],w.shape[0]-1, self.sigm_lambda) * self.sigm_weight
         W2 = np.multiply(sigm, G_resp.flatten())
@@ -162,12 +163,17 @@ class DD4AO:
             prob = cp.Problem(cp.Minimize(obj_2 + obj_inf), CON)
         else:
             prob = cp.Problem(cp.Minimize(obj_2), CON)
-
-        prob.solve(solver=cp.CLARABEL, verbose=verbose, tol_gap_abs=1e-4, tol_gap_rel=1e-4, tol_feas=1e-4)
+        try:
+            # prob.solve(solver=cp.CLARABEL)
+            prob.solve(solver=cp.CLARABEL, verbose=False, tol_gap_abs=1e-7, tol_gap_rel=1e-7, tol_feas=1e-7)
+        except cp.error.SolverError as e:
+            print("Solver failed:", e)
+            return -1
 
         if verbose:
             print('obj = {:.2f}'.format(obj_2.value[0]))
-            print('obj_inf = {:.5f}'.format(obj_inf.value[0][0]))
+            if self.high_freq_u_lim:
+                print('obj_inf = {:.5f}'.format(obj_inf.value[0][0]))
         self.num = X_n.value
         if isinstance(Y_n, np.ndarray):  # happens if controller order is 1
             self.den = Y_n
@@ -179,21 +185,21 @@ class DD4AO:
         t_start = time.perf_counter()
         for i in range(self.n_iter):
             obj = self.solve_iter(verbose)
-            if np.abs(self.obj_prev - obj) < self.tol:
+            if np.abs(self.obj_prev - obj) < self.tol or obj == -1:
                 break
             if verbose:
                 print('iter {} obj = {:.5f} diff = {:.5f}'.format(i, obj, np.abs(self.obj_prev - obj)))
             self.obj_prev = obj
 
         if self.num.squeeze().ndim == 0:
-            self.num = sp_signal.convolve(np.reshape(self.num, (1)), self.Fx)
+            self.num = signal.convolve(np.reshape(self.num, (1)), self.Fx)
         else:
-            self.num = sp_signal.convolve(self.num.squeeze(), self.Fx)
+            self.num = signal.convolve(self.num.squeeze(), self.Fx)
 
         if self.den.squeeze().ndim == 0:
-            self.den = sp_signal.convolve(np.reshape(self.den, (1)), self.Fy)
+            self.den = signal.convolve(np.reshape(self.den, (1)), self.Fy)
         else:
-            self.den = sp_signal.convolve(self.den.squeeze(), self.Fy)
+            self.den = signal.convolve(self.den.squeeze(), self.Fy)
 
         self.K = ct.tf(self.num, self.den, self.Ts)
 
@@ -203,12 +209,9 @@ class DD4AO:
         self.S_resp = 1 / (1 + self.GK_resp)
         self.T_resp = self.GK_resp / (1 + self.GK_resp)
 
-        # self.gm, self.pm, self.wcg, self.wcp = ct.margin(np.abs(self.GK_resp).squeeze(),np.angle(self.GK_resp, deg=True).squeeze(),self.w.squeeze())
+        self.gm, self.pm, self.wcg, self.wcp = ct.margin(np.abs(self.GK_resp).squeeze(),np.angle(self.GK_resp, deg=True).squeeze(),self.w.squeeze())
         elapsed_time = time.perf_counter() - t_start
 
         if verbose:
             print('time elapsed = {:.2f} s'.format(elapsed_time))
         return 1
-
-
-
