@@ -24,12 +24,14 @@ max_order = config['optimizer']['max_order']
 update_rate = config['optimizer']['update_rate']
 n_fft = int(dao.shm(shm_path['settings']['n_fft']).get_data(check=False, semNb=sem_nb)[0][0])
 fs = dao.shm(shm_path['G']['fs']).get_data(check=False, semNb=sem_nb)[0][0]
+fs = 500
 delay = dao.shm(shm_path['G']['delay']).get_data(check=False, semNb=sem_nb)[0][0]
 
 K_mat_shm = dao.shm(shm_path['K']['K_mat_dd'])
 n_modes = dao.shm(shm_path['settings']['n_modes_dd']).get_data(check=False, semNb=sem_nb)[0][0]
 order = dao.shm(shm_path['settings']['dd_order']).get_data(check=False, semNb=sem_nb)[0][0]
 gain_margin = dao.shm(shm_path['settings']['gain_margin']).get_data(check=False, semNb=sem_nb)[0][0]
+high_freq_weight = dao.shm(shm_path['settings']['high_freq_weight']).get_data(check=False, semNb=sem_nb)[0][0]
 f_shm = dao.shm(shm_path['frequency_domain_buff']['f'])
 pol_fft_shm = dao.shm(shm_path['frequency_domain_buff']['pol_fft'])
 
@@ -51,8 +53,7 @@ f = np.linspace(f_p[0],f_p[-1],n_fft)
 
 f_opti_shm.set_data(f[:,np.newaxis].astype(np.float32)) 
 w = 2*np.pi*f
-# delay += 0.4
-# delay = 2
+
 G_resp = G_freq_resp(delay, w, fs)*gain_margin
 
 # G_resp = freqresp(G_tf(delay,fs),w)*gain_margin
@@ -83,14 +84,14 @@ pol_fft_avg /= bin_counts
 
 for i in range(n_optmization):
     print(i)
-    K_array[i] = dd4ao.DD4AO(w, G_resp, pol_fft_avg[:,i], order,fs, n_iter = 10, tol = 1e-2,high_freq_u_lim=True)
+    K_array[i] = dd4ao.DD4AO(w, G_resp, pol_fft_avg[:,i], order,fs, n_iter = 10, tol = 1e-2,high_freq_u_lim=True, high_freq_weight = high_freq_weight)
     K_array[i].compute_controller()
     
 for i in range(n_modes):
     K_mat[:order + 1,i] = K_array[optimization_indexes_wide[i]].num.squeeze()
     K_mat[max_order + 1:max_order+order+1,i] = -K_array[optimization_indexes_wide[i]].den.squeeze()[1:]
     K_mat_shm.set_data(K_mat)
-    S[:n_fft,i] = 1/np.abs(K_array[optimization_indexes_wide[i]].S_resp.squeeze())
+    S[:n_fft,i] = 1/np.abs(K_array[optimization_indexes_wide[i]].S_freq.squeeze())
 
 S_shm.set_data(S)
 elapsed_time = time.perf_counter() - t_start

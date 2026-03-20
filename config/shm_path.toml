@@ -34,6 +34,7 @@ n_fft = '/tmp/n_fft.shm'
 wait_time = '/tmp/wait_time.shm'
 record_time = '/tmp/record_time.shm'
 pyramid_select = '/tmp/pyramid_select.shm'
+high_freq_weight = '/tmp/high_freq_weight.shm'
 
 
 [event_flag]

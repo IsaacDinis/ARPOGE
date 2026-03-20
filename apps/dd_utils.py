@@ -27,13 +27,6 @@ def generate_prbs(length, order):
 def freqresp(sys, w):
     return ct.frequency_response(sys,w.squeeze()).frdata.squeeze()
 
-def rcone(x,y,z):
-    # rcone_con = [
-    #     cp.SOC(x[i] + y[i], cp.vstack([2 * z[i], x[i] - y[i]])) for i in range(x.shape[0])
-    # ]
-    rcone_con = cp.SOC((x + y).flatten(order = 'C'), cp.hstack([2 * z, x - y]).T)
-    rcone_con =  [rcone_con,x >= 0, y >= 0]
-    return rcone_con
 
 def logspace(start,stop,num):
     return np.logspace(np.log10(start),np.log10(stop),num)
@@ -79,23 +72,6 @@ def theoretical_best_perf(dist_psd):
     length = np.max(dist_psd.shape)
     return 10**(np.sum(np.log10(dist_psd))/length)*length
 
-def get_normal_direction(r):
-    n = 1j*np.diff(r, axis = 0)
-    for i in range(len(n)):
-        if n[i] == 0:
-            n[i] = r[i]
-        elif np.imag(np.conj(n[i])*r[i])*np.imag(np.conj(n[i])*r[i+1]) > 0:
-            idx = np.argmin(np.abs(r[i:i+1]))
-            n[i] = r[i+idx]
-    n = n/np.abs(n)
-    n = n*np.sign(np.real(np.conj(n)*r[0:-1]))
-    return n
-
-# def get_normal_direction(r):
-#     # r : (N,1) complex CVXPY expression
-#     dr = r[1:] - r[:-1]          # CVXPY-safe diff
-#     n = 1j * dr                  # rotation 90°
-#     return n
 
 def compute_fft_mag_welch(data, fft_size, fs):
     if data.ndim == 1:
@@ -128,35 +104,7 @@ def compute_fft_mag_welch(data, fft_size, fs):
     f[-1] *= 0.9999
     
     return magnitude_spectrum, f, spectrogram
-# def compute_fft_mag_welch(data, fft_size, fs):
-#     if data.ndim == 1:
-#         data = data[:, np.newaxis]
-#
-#     n_modes = data.shape[1]
-#
-#     window_size = fft_size
-#
-#     n_frames = (data.shape[0] - window_size) // (fft_size // 2) + 1
-#     spectrogram = np.zeros((fft_size // 2 + 1, n_frames, n_modes))
-#
-#     window = np.hamming(window_size)
-#
-#     for mode in range(n_modes):
-#         for i in range(n_frames):
-#
-#             start_idx = i * (fft_size // 2)  # Overlap by 50%
-#             data_w = data[start_idx:start_idx + window_size, mode]
-#             data_w = data_w * window
-#             fft_result = np.fft.rfft(data_w)
-#             psd_w = (np.abs(fft_result)) ** 2 / (fft_size * np.mean(window ** 2))
-#             psd_w[1:-1] *= 2  # Double non-DC, non-Nyquist components
-#             spectrogram[:, i, mode] = psd_w
-#
-#     avg_psd = np.mean(spectrogram, axis=1).squeeze()
-#     magnitude_spectrum = np.sqrt(avg_psd)
-#     f = np.linspace(0, fs / 2, fft_size // 2 + 1)
-#
-#     return magnitude_spectrum, f, spectrogram
+
 
 def plot_sensitivity(ax,G, K, K0, dist_psd, f, bandwidth):
     if f[0] == 0:

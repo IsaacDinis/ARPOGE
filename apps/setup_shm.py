@@ -72,6 +72,8 @@ gain_margin = np.array([[1.2]],dtype = np.float32)
 wait_time = np.array([[config['calibration']['wait_time']]],dtype = np.float32)
 n_fft_optimizer = np.array([[config['optimizer']['n_fft']]],dtype = np.uint32)
 dd_order = np.array([[config['optimizer']['max_order']]],dtype = np.uint32)
+high_freq_weight = np.array([[config['optimizer']['high_freq_weight']]],dtype = np.uint32)
+
 
 slopes_4_shm = dao.shm(shm_path['HW']['slopes_4sided'])
 slopes_4 = slopes_4_shm.get_data()
@@ -130,6 +132,7 @@ dao.shm(shm_path['settings']['gain_margin'],gain_margin)
 dao.shm(shm_path['settings']['wait_time'],wait_time)
 dao.shm(shm_path['settings']['n_fft'],n_fft_optimizer)
 dao.shm(shm_path['settings']['record_time'],record_time)
+dao.shm(shm_path['settings']['high_freq_weight'],high_freq_weight)
 
 dao.shm(shm_path['KL_mat']['S2M'],S2M_custom)
 dao.shm(shm_path['KL_mat']['V2M'],V2M)

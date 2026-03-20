@@ -21,6 +21,7 @@ n_modes = 195
 n_fft = 150
 n_fft_max = 1000
 update_rate = 30 #[s]
+high_freq_weight = 10
 
 
 [freq_mag_estimator]

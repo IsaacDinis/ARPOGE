@@ -35,7 +35,6 @@ fs = dao.shm(shm_path['G']['fs']).get_data()[0][0]
 closed_loop_state_flag_shm = dao.shm(shm_path['settings']['closed_loop_state_flag'])
 
 time_start = time.perf_counter()
-
 while True:
     # if (time.perf_counter() - time_start > update_rate and closed_loop_state_flag_shm.get_data(check=False, semNb=sem_nb)):
     if (time.perf_counter() - time_start > update_rate):

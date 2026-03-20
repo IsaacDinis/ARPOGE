@@ -360,8 +360,6 @@ class MainWindow(QMainWindow):
         self.save_flat_button.clicked.connect(self.save_flat)
         self.load_flat_button.clicked.connect(self.load_flat)
         self.reset_flat_button.clicked.connect(self.reset_flat)
-        self.save_latency_button.clicked.connect(self.save_latency)
-        self.load_latency_button.clicked.connect(self.load_latency)
         self.nico_button.clicked.connect(self.start_record_and_close_loop)
 
         self.controller_select_dial.valueChanged.connect(self.update_controller_select)
@@ -375,6 +373,12 @@ class MainWindow(QMainWindow):
         self.order_dd_spinbox.valueChanged.connect(self.order_dd_changed)
         self.order_dd_changed(self.order_dd_spinbox.value())
 
+        self.high_freq_weight_spinbox.valueChanged.connect(self.high_freq_weight_changed)
+        self.high_freq_weight_changed(self.high_freq_weight_spinbox.value())
+
+        self.delay_spinbox.valueChanged.connect(self.delay_changed)
+        self.delay_changed(self.delay_spinbox.value())
+
         self.optimization_update_rate_dd_spinbox.valueChanged.connect(self.update_rate_dd_changed)
 
     def init_process(self):
@@ -382,7 +386,6 @@ class MainWindow(QMainWindow):
         self.record_process = ProcessManager("recorder.py",self.start_record_button, None, self.record_output)
         self.pol_reconstructor_process = ProcessManager("pol_reconstructor.py",self.start_pol_reconstructor_button, self.stop_pol_reconstructor_button, self.pol_reconstructor_output)
         self.freq_mag_estimator_process = ProcessManager("freq_mag_estimator.py",self.start_freq_mag_estimator_button, self.stop_freq_mag_estimator_button, self.freq_mag_estimator_output)
-        self.identify_latency_frequency_process = ProcessManager("identify_latency_frequency.py",self.start_latency_identification_button, None, self.latency_identification_output)
         self.optimization_dd_process = ProcessManager("optimizer_dd.py",self.start_optimization_dd_button, None, self.optimization_dd_output)
 
     def init_shm(self):
@@ -420,8 +423,6 @@ class MainWindow(QMainWindow):
         self.K_mat_omgi_shm = dao.shm(shm_path['K']['K_mat_omgi']) 
 
         
-
-        self.latency_shm = dao.shm(shm_path['G']['latency']) 
         self.fs_shm = dao.shm(shm_path['G']['fs']) 
         self.delay_shm = dao.shm(shm_path['G']['delay']) 
 
@@ -430,6 +431,8 @@ class MainWindow(QMainWindow):
         self.gain_margin_shm = dao.shm(shm_path['settings']['gain_margin']) 
         self.record_time_shm = dao.shm(shm_path['settings']['record_time'])
         self.n_fft_shm = dao.shm(shm_path['settings']['n_fft']) 
+        self.high_freq_weight_shm = dao.shm(shm_path['settings']['high_freq_weight']) 
+        
 
         
         self.S_dd_shm = dao.shm(shm_path['S']['S_dd']) 
@@ -554,6 +557,14 @@ class MainWindow(QMainWindow):
         self.dd_order_shm.set_data(np.array([[value]],np.uint32))
         self.reset_dd_controller()
 
+    def delay_changed(self,value):
+        self.delay_shm.set_data(np.array([[value]],np.float32))
+
+
+    def high_freq_weight_changed(self,value):
+        self.high_freq_weight_shm.set_data(np.array([[value]],np.uint32))
+
+
     def n_modes_changed(self,value):
         self.n_modes_controlled_shm.set_data(np.array([[value]],np.uint32))
 
@@ -606,25 +617,6 @@ class MainWindow(QMainWindow):
         #self.flat_dm_shm.set_data((flat+calib_flat.astype(np.float32)).astype(np.float32))
         self.flat_dm_shm.set_data((flat).astype(np.float32))
 
-    def save_latency(self):
-        latency = self.latency_shm.get_data(check=False, semNb=self.sem_nb)
-        fs = self.fs_shm.get_data(check=False, semNb=self.sem_nb)
-        delay = self.delay_shm.get_data(check=False, semNb=self.sem_nb)
-        t = self.t_shm.get_data(check=False, semNb=self.sem_nb)
-        fits.writeto(os.path.join(data_dir, "latency.fits"), latency, overwrite = True)
-        fits.writeto(os.path.join(data_dir, "fs.fits"),fs, overwrite = True)
-        fits.writeto(os.path.join(data_dir, "delay.fits"),delay, overwrite = True)
-        fits.writeto(os.path.join(data_dir, "t.fits"),t, overwrite = True)
-        
-    def load_latency(self):
-        latency = fits.getdata(os.path.join(data_dir, "latency.fits"))
-        fs = fits.getdata(os.path.join(data_dir, "fs.fits"))
-        delay = fits.getdata(os.path.join(data_dir, "delay.fits"))
-        t = fits.getdata(os.path.join(data_dir, "t.fits"))
-        self.latency_shm.set_data(latency.astype(np.float32))
-        self.fs_shm.set_data(fs.astype(np.float32))
-        self.delay_shm.set_data(delay.astype(np.float32))
-        self.t_shm.set_data(t.astype(np.float32))
         
     def update_controller_select(self, value):
         self.controller_select_shm.set_data(np.array([[value]],np.uint32))
@@ -669,7 +661,6 @@ class MainWindow(QMainWindow):
         self.pol_reconstructor_process.stop_process()
         self.freq_mag_estimator_process.stop_process()
         self.view_update_timer.stop()
-        self.identify_latency_frequency_process.stop_process()
         self.optimization_dd_process.stop_process()
         self.optimization_dd_timer.stop()
         print("All processes and timers stopped")
