@@ -26,15 +26,15 @@ n_fft = int(dao.shm(shm_path['settings']['n_fft']).get_data(check=False, semNb=s
 fs = dao.shm(shm_path['G']['fs']).get_data(check=False, semNb=sem_nb)[0][0]
 delay = dao.shm(shm_path['G']['delay']).get_data(check=False, semNb=sem_nb)[0][0]
 
-K_mat_shm = dao.shm(shm_path['K']['K_mat_dd'])
+K_mat_shm = dao.shm(shm_path['K']['K_mat_omgi'])
 n_modes = dao.shm(shm_path['settings']['n_modes_dd']).get_data(check=False, semNb=sem_nb)[0][0]
-order = dao.shm(shm_path['settings']['dd_order']).get_data(check=False, semNb=sem_nb)[0][0]
+order = 1
 gain_margin = dao.shm(shm_path['settings']['gain_margin']).get_data(check=False, semNb=sem_nb)[0][0]
 high_freq_weight = dao.shm(shm_path['settings']['high_freq_weight']).get_data(check=False, semNb=sem_nb)[0][0]
 f_shm = dao.shm(shm_path['frequency_domain_buff']['f'])
 pol_fft_shm = dao.shm(shm_path['frequency_domain_buff']['pol_fft'])
 
-S_shm = dao.shm(shm_path['S']['S_dd']) 
+S_shm = dao.shm(shm_path['S']['S_omgi']) 
 f_opti_shm = dao.shm(shm_path['S']['f_opti'])
 
 
@@ -52,7 +52,7 @@ f = np.linspace(f_p[0],f_p[-1],n_fft)
 
 f_opti_shm.set_data(f[:,np.newaxis].astype(np.float32)) 
 w = 2*np.pi*f
-
+print(gain_margin)
 G_resp = G_freq_resp(delay, w, fs)*gain_margin
 
 # G_resp = freqresp(G_tf(delay,fs),w)*gain_margin

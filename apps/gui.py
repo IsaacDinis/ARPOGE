@@ -339,6 +339,8 @@ class MainWindow(QMainWindow):
         self.view_update_timer.timeout.connect(self.update_modes_amp_wiew)
         self.optimization_dd_timer = QTimer()
         self.optimization_dd_timer.timeout.connect(self.optimization_dd_process.start_process)
+        self.optimization_omgi_timer = QTimer()
+        self.optimization_omgi_timer.timeout.connect(self.optimization_omgi_process.start_process)
         self.view_update_timer.start(100) # ms 
 
         print("init done")
@@ -379,7 +381,11 @@ class MainWindow(QMainWindow):
         self.delay_spinbox.valueChanged.connect(self.delay_changed)
         self.delay_changed(self.delay_spinbox.value())
 
+        self.gain_margin_spinbox.valueChanged.connect(self.gain_margin_changed)
+        self.gain_margin_changed(self.gain_margin_spinbox.value())
+
         self.optimization_update_rate_dd_spinbox.valueChanged.connect(self.update_rate_dd_changed)
+        self.optimization_update_rate_omgi_spinbox.valueChanged.connect(self.update_rate_omgi_changed)
 
     def init_process(self):
 
@@ -387,6 +393,7 @@ class MainWindow(QMainWindow):
         self.pol_reconstructor_process = ProcessManager("pol_reconstructor.py",self.start_pol_reconstructor_button, self.stop_pol_reconstructor_button, self.pol_reconstructor_output)
         self.freq_mag_estimator_process = ProcessManager("freq_mag_estimator.py",self.start_freq_mag_estimator_button, self.stop_freq_mag_estimator_button, self.freq_mag_estimator_output)
         self.optimization_dd_process = ProcessManager("optimizer_dd.py",self.start_optimization_dd_button, None, self.optimization_dd_output)
+        self.optimization_omgi_process = ProcessManager("optimizer_omgi.py",self.start_optimization_omgi_button, None, self.optimization_omgi_output)
 
     def init_shm(self):
 
@@ -662,7 +669,9 @@ class MainWindow(QMainWindow):
         self.freq_mag_estimator_process.stop_process()
         self.view_update_timer.stop()
         self.optimization_dd_process.stop_process()
+        self.optimization_omgi_process.stop_process()
         self.optimization_dd_timer.stop()
+        self.optimization_omgi_timer.stop()
         print("All processes and timers stopped")
         event.accept()
 
