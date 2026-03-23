@@ -60,6 +60,7 @@ telemetry_ts = '/tmp/telemetry_ts.shm'
 [HW]
 slopes_4sided = '/tmp/papyrus_slopes.im.shm'
 slopes_3sided = '/tmp/papyrus_slopes.im.shm' #TODO change
+# '/tmp/papyrus_modes.im.shm'
 modes_in_custom = '/tmp/modes.shm'
 modes_in_3sided = '/tmp/modes.shm'
 modes_in_4sided = '/tmp/modes.shm'

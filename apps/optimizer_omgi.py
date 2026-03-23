@@ -90,7 +90,7 @@ for i in range(n_modes):
     K_mat[:order + 1,i] = K_array[optimization_indexes_wide[i]].num.squeeze()
     K_mat[max_order + 1:max_order+order+1,i] = -K_array[optimization_indexes_wide[i]].den.squeeze()[1:]
     K_mat_shm.set_data(K_mat)
-    S[:n_fft,i] = 1/(np.abs(K_array[optimization_indexes_wide[i]].S_freq.squeeze())*gain_margin)
+    S[:n_fft,i] = 1/np.abs(K_array[optimization_indexes_wide[i]].S_freq.squeeze())
 
 S_shm.set_data(S)
 elapsed_time = time.perf_counter() - t_start
