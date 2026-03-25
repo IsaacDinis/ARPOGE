@@ -384,6 +384,9 @@ class MainWindow(QMainWindow):
         self.gain_margin_spinbox.valueChanged.connect(self.gain_margin_changed)
         self.gain_margin_changed(self.gain_margin_spinbox.value())
 
+        self.optical_gain_spinbox.valueChanged.connect(self.optical_gain_changed)
+        self.optical_gain_changed(self.optical_gain_spinbox.value())
+
         self.optimization_update_rate_dd_spinbox.valueChanged.connect(self.update_rate_dd_changed)
         self.optimization_update_rate_omgi_spinbox.valueChanged.connect(self.update_rate_omgi_changed)
 
@@ -436,6 +439,8 @@ class MainWindow(QMainWindow):
 
         self.controller_select_shm = dao.shm(shm_path['settings']['controller_select']) 
         self.gain_margin_shm = dao.shm(shm_path['settings']['gain_margin']) 
+        self.optical_gain_shm = dao.shm(shm_path['settings']['optical_gain']) 
+        
         self.record_time_shm = dao.shm(shm_path['settings']['record_time'])
         self.n_fft_shm = dao.shm(shm_path['settings']['n_fft']) 
         self.high_freq_weight_shm = dao.shm(shm_path['settings']['high_freq_weight']) 
@@ -656,6 +661,9 @@ class MainWindow(QMainWindow):
 
     def gain_margin_changed(self,value):
         self.gain_margin_shm.set_data(np.array([[value]],np.float32))
+
+    def optical_gain_changed(self,value):
+        self.optical_gain_shm.set_data(np.array([[value]],np.float32))
 
     def update_pyramid_select(self, value):
         self.pyramid_select_shm.set_data(np.array([[value]],np.uint32))

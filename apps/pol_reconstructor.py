@@ -17,6 +17,7 @@ sem_nb = config['sem_nb']['pol']
 
 
 delay = dao.shm(shm_path['G']['delay']).get_data()[0][0]
+optical_gain = dao.shm(shm_path['settings']['optical_gain']).get_data()[0][0]
 # delay = 2
 
 update_rate = config['visualizer']['update_rate']
@@ -57,7 +58,7 @@ while True:
     modes_in_buf = np.roll(modes_in_buf, -1, axis=0)
     modes_out_buf = np.roll(modes_out_buf, -1, axis=0)
 
-    modes_in_buf[-1, :] = modes_in
+    modes_in_buf[-1, :] = modes_in*optical_gain
     modes_out_buf[-1, :] = command
     pol = pol_reconstruct(modes_out_buf, modes_in_buf, delay)
     pol_buf[-1, :] = pol
